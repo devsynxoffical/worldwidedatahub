@@ -23,6 +23,16 @@ jobs:
             worldwidedatahub.com/wp-content/themes/theglobaldatabase
           sparse-checkout-cone-mode: true
 
+      - name: Check FTP server reachability
+        env:
+          H: ${{ secrets.FTP_SERVER }}
+        run: |
+          echo "Resolving FTP host..."; getent hosts "$H" || echo "DNS lookup FAILED"
+          for h in "$H" worldwidedatahub.com ftp.worldwidedatahub.com; do
+            timeout 10 bash -c "echo > /dev/tcp/$h/21" && echo "port 21 OPEN on $h" || echo "port 21 CLOSED/TIMEOUT on $h"
+          done
+          getent hosts worldwidedatahub.com ftp.worldwidedatahub.com || true
+
       - name: Upload changed theme files via FTPS
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -33,6 +43,8 @@ jobs:
           protocol: ftps
           local-dir: ./worldwidedatahub.com/wp-content/themes/theglobaldatabase/
           server-dir: ./wp-content/themes/theglobaldatabase/
+          timeout: 120000
+          log-level: verbose
           exclude: |
             **/.git*
             **/.git*/**
