@@ -1,0 +1,40 @@
+name: Deploy theme to hosting
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'worldwidedatahub.com/wp-content/themes/theglobaldatabase/**'
+      - '.github/workflows/deploy-theme.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-theme
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout theme only
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            worldwidedatahub.com/wp-content/themes/theglobaldatabase
+          sparse-checkout-cone-mode: true
+
+      - name: Upload changed theme files via FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: 21
+          protocol: ftps
+          local-dir: ./worldwidedatahub.com/wp-content/themes/theglobaldatabase/
+          server-dir: ./wp-content/themes/theglobaldatabase/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            php_errorlog
+            **/*.log

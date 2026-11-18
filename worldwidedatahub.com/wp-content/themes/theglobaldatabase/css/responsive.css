@@ -137,7 +137,7 @@ a.orange-btn { padding:7px 25px 8px; font-size: 13px; }
 .our-links h3, .foot-contact h3 { font-size: 20px; }
 .top-footer { padding-top:30px; }
 h3 { font-size: 1.2rem; }
-h2 { font-size: 1.6rem; }
+h2, .h2 { font-size: 1.6rem; }
 .product-detail-features { padding:20px 0px 20px; }
 }
 

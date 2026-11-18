@@ -16,6 +16,7 @@
 	
 	  <meta name="google-site-verification" content="QTlTAuASoIDLiIoodLUzpIi4Xec-lw6JEzzZ69KZCD8" />
 	 <meta name="google-site-verification" content="BJMnw3kqFW1yoitGsrTWTDVENvTDTVr8gjAhXbUf8VE" />
+	 <meta name="google-site-verification" content="zpoV4SPT9g50Kh8mPvO1KKQ62r-RoMILMTSV1QnxwPw" />
     <!-- Required meta tags -->
     <meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
@@ -114,7 +115,7 @@
     <div class="header-top">
     <div class="container">
       <div class="logo">
-        <a href="<?php echo site_url(); ?>"> <img src="<?php the_field('logo','option'); ?>" alt="" width="100%">  </a>
+        <a href="<?php echo site_url(); ?>"> <img src="<?php the_field('logo','option'); ?>" alt="WorldWide DataHub logo" width="100%">  </a>
         <button class="menu-btn">
           <span></span>
           <span></span>
@@ -127,17 +128,17 @@
       <div class="header-right-option">
         <div class="search-btn"> 
 
-          <a href="javascript:void(0);" class="search-mobile"> <img src="<?php bloginfo('template_directory'); ?>/img/search.png" alt=""> </a> 
+          <a href="javascript:void(0);" class="search-mobile"> <img src="<?php bloginfo('template_directory'); ?>/img/search.png" alt="Search"> </a> 
           <a href="javascript:void(0);" class="search-cancel" style="display: none"> <i class="fa fa-times" aria-hidden="true"></i></a> 
 
         </div>
       	<?php if(is_user_logged_in()){ ?>
-        <div class="account-btn"> <a href="<?php echo site_url();?>/my-account/"> <img src="<?php bloginfo('template_directory'); ?>/img/user.png" alt=""> <span class="account-text"> My Account </span></a> </div>
+        <div class="account-btn"> <a href="<?php echo site_url();?>/my-account/"> <img src="<?php bloginfo('template_directory'); ?>/img/user.png" alt="My account"> <span class="account-text"> My Account </span></a> </div>
         <?php } else {  ?>
-        	<div class="account-btn"> <a href="<?php echo site_url();?>/my-account/"> <img src="<?php bloginfo('template_directory'); ?>/img/user.png" alt=""> <span class="account-text"> Login / Register </span></a> </div>
+        	<div class="account-btn"> <a href="<?php echo site_url();?>/my-account/"> <img src="<?php bloginfo('template_directory'); ?>/img/user.png" alt="My account"> <span class="account-text"> Login / Register </span></a> </div>
         <?php } ?>	
         <?php  $count = WC()->cart->cart_contents_count; ?>
-        <div class="shoping-cart-btn-h"> <a href="<?php echo site_url('/cart'); ?>"> <img src="<?php bloginfo('template_directory'); ?>/img/cart.png" alt=""> <span class="account-text"> Shopping Cart: </span> <span id="count-cart-items"> <?php if($count > 0): echo esc_html( $count ); else: echo "0"; endif; ?> Items </span></a> </div>
+        <div class="shoping-cart-btn-h"> <a href="<?php echo site_url('/cart'); ?>"> <img src="<?php bloginfo('template_directory'); ?>/img/cart.png" alt="Shopping cart"> <span class="account-text"> Shopping Cart: </span> <span id="count-cart-items"> <?php if($count > 0): echo esc_html( $count ); else: echo "0"; endif; ?> Items </span></a> </div>
         <div class="header-social-media">
         <?php if( have_rows('header_social', 'option') ):?>
           <ul>
@@ -172,7 +173,7 @@
         <span> </span>
       </a>
       <div class="mobile-nav">
-        <img src="<?php the_field('logo','option'); ?>" alt="" width="100%">
+        <img src="<?php the_field('logo','option'); ?>" alt="WorldWide DataHub logo" width="100%">
         <?php
         wp_nav_menu(array(
         'menu'=>'Primary',

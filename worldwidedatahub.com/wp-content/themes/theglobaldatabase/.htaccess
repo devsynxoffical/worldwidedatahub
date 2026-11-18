@@ -1,0 +1,4 @@
+# Block public access to logs and dev files
+<FilesMatch "(php_errorlog|error_log|\.log|composer\.(json|lock)|package\.json|phpcs\.xml\.dist|README\.md)$">
+  Require all denied
+</FilesMatch>
