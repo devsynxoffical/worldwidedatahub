@@ -1,0 +1,115 @@
+<?php
+/**
+ * Per-platform refund adapter contract.
+ *
+ * @package GTM4WP
+ * @author Thomas Geiger
+ * @copyright 2013- Geiger Tamás e.v. (Thomas Geiger s.e.)
+ * @license GNU General Public License, version 3
+ */
+
+namespace GTM4WP\Modules\GoogleDataManager;
+
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * The thin per-platform half of the refund lane: which hook says a refund
+ * happened, what it looks like (RefundData), whether it was sent, and how to
+ * remember that. Nothing about the API, the queue or the consent gate lives
+ * here, so a third platform is one class and WC/EDD parity costs a hook and a
+ * reader.
+ */
+interface RefundSource {
+
+	/**
+	 * Platform id of the WooCommerce adapter.
+	 */
+	public const PLATFORM_WOOCOMMERCE = 'woocommerce';
+
+	/**
+	 * Platform id of the Easy Digital Downloads adapter.
+	 */
+	public const PLATFORM_EDD = 'edd';
+
+	/**
+	 * Meta key remembering that a refund has been sent. Written on the REFUND,
+	 * not the order: each partial refund of an order is its own event and must
+	 * be sent exactly once, which a per-order flag could not express.
+	 */
+	public const META_SENT = '_gtm4wp_gdm_refund_sent';
+
+	/**
+	 * Meta key holding the measurement ids that accepted a refund, written on
+	 * the refund like META_SENT. META_SENT only says the refund is done; this
+	 * survives a partial accept whose other destinations are still retrying
+	 * or failed for good, which the diagnostics ring forgets first (#394).
+	 */
+	public const META_ACCEPTED = '_gtm4wp_gdm_refund_accepted';
+
+	/**
+	 * The platform id this adapter serves.
+	 *
+	 * @return string
+	 */
+	public function platform(): string;
+
+	/**
+	 * Whether this platform is active in the current request.
+	 *
+	 * @return bool
+	 */
+	public function is_active(): bool;
+
+	/**
+	 * Registers the platform's refund hook.
+	 *
+	 * @param callable $enqueue Receives ( int $order_id, int $refund_id ) for every refund issued.
+	 * @return void
+	 */
+	public function register_hooks( callable $enqueue ): void;
+
+	/**
+	 * Reads one refund into the platform-neutral shape.
+	 *
+	 * @param int $order_id  The parent order.
+	 * @param int $refund_id The refund.
+	 * @return RefundData|null Null when either object is gone or is not what it claims to be.
+	 */
+	public function load( int $order_id, int $refund_id ): ?RefundData;
+
+	/**
+	 * The platform's own refund and order objects, for the last-chance filter.
+	 *
+	 * @param int $order_id  The parent order.
+	 * @param int $refund_id The refund.
+	 * @return array{0: mixed, 1: mixed} Refund object, order object; either may be null.
+	 */
+	public function objects( int $order_id, int $refund_id ): array;
+
+	/**
+	 * Whether this refund has already been sent successfully.
+	 *
+	 * @param int $refund_id The refund.
+	 * @return bool
+	 */
+	public function is_sent( int $refund_id ): bool;
+
+	/**
+	 * The destinations that already accepted this refund.
+	 *
+	 * @param int $refund_id The refund.
+	 * @return string[] Measurement ids.
+	 */
+	public function accepted_destinations( int $refund_id ): array;
+
+	/**
+	 * Remembers, in one write, the destinations that accepted this refund and,
+	 * when the sending is over, that the refund was sent.
+	 *
+	 * @param int         $refund_id       The refund.
+	 * @param string[]    $measurements    Measurement ids that accepted it now; merged with the stored ones.
+	 * @param string|null $sent_request_id The request id that completes the refund, or null while destinations are still missing it.
+	 * @return void
+	 */
+	public function mark_accepted( int $refund_id, array $measurements, ?string $sent_request_id = null ): void;
+}

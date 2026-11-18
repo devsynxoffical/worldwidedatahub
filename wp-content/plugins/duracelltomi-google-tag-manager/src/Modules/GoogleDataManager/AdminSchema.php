@@ -1,0 +1,458 @@
+<?php
+/**
+ * Google Data Manager module admin schema.
+ *
+ * @package GTM4WP
+ * @author Thomas Geiger
+ * @copyright 2013- Geiger Tamás e.v. (Thomas Geiger s.e.)
+ * @license GNU General Public License, version 3
+ */
+
+namespace GTM4WP\Modules\GoogleDataManager;
+
+use GTM4WP\Abilities\ProviderInterface;
+use GTM4WP\Google\KeyVault;
+use GTM4WP\Module\AbilitiesInterface;
+use GTM4WP\Module\AdminSchemaInterface;
+use GTM4WP\Module\DocumentedSchemaInterface;
+use GTM4WP\Module\PanelSchemaInterface;
+use GTM4WP\Module\SiteHealthInfoInterface;
+use GTM4WP\Module\SiteHealthTestsInterface;
+use GTM4WP\Modules\GoogleAuth\GoogleAuthModule;
+use GTM4WP\Options\Field;
+use GTM4WP\Options\Options;
+use GTM4WP\RestCors;
+
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * The destinations table plus the custom test panel below it - the first
+ * schema mixing Field controls with a PanelSchemaInterface panel.
+ *
+ * Cost discipline: fields() runs whenever a settings schema is built (the
+ * settings POST dispatch, abilities registration, the settings screen), so it
+ * stays database-free. The service-account choices of the select column come
+ * through panel_data() instead (columnChoices), which only runs when the
+ * settings page itself is rendered - the same cost class as the key notice.
+ */
+final class AdminSchema implements AdminSchemaInterface, DocumentedSchemaInterface, PanelSchemaInterface, SiteHealthInfoInterface, SiteHealthTestsInterface, AbilitiesInterface {
+
+	/**
+	 * Documentation hub of this module on gtm4wp.com; it also carries the anchors
+	 * of the options below.
+	 */
+	private const DOC_PAGE = 'google-data-manager-for-wordpress';
+
+	/**
+	 * Id of the React component rendering the test panel, defined in
+	 * js/admin/components/panels/index.js.
+	 */
+	public const PANEL = 'gdm-destinations';
+
+	/**
+	 * Accordion group of the destinations table and its test panel.
+	 */
+	public const GROUP_DESTINATIONS = 'destinations';
+
+	/**
+	 * Accordion group of the server-side send lanes.
+	 */
+	public const GROUP_SENDING = 'sending';
+
+	/**
+	 * Module documentation page.
+	 *
+	 * @return string
+	 */
+	public function doc_url(): string {
+		return self::DOC_PAGE;
+	}
+
+	/**
+	 * Module title.
+	 *
+	 * @return string
+	 */
+	public function title(): string {
+		return __( 'Google Data Manager', 'duracelltomi-google-tag-manager' );
+	}
+
+	/**
+	 * Module panel introduction.
+	 *
+	 * @return string
+	 */
+	public function intro(): string {
+		return '<p>' . esc_html__(
+			'The Google Data Manager API lets this site send e-commerce signals to Google from the server - most importantly signals the browser never sees, such as refunds issued in the store admin. Define where the data should go, verify that Google accepts it, then turn on the signals you want sent. Nothing leaves the site until you do: every option here is off by default.',
+			'duracelltomi-google-tag-manager'
+		) . '</p><p>' . sprintf(
+			/* translators: 1: opening anchor tag linking to the Google service accounts section. 2: closing anchor tag. */
+			esc_html__(
+				'Every destination sends with a stored %1$sGoogle service account%2$s, so upload a key file there first, then add the service account to your Google Analytics 4 property with the Editor role. Use the Test button of a destination to check the whole chain: the key, the API being enabled in your Google Cloud project, and the account\'s access to the property.',
+				'duracelltomi-google-tag-manager'
+			),
+			'<a href="#' . esc_attr( GoogleAuthModule::ID ) . '">',
+			'</a>'
+		) . '</p>';
+	}
+
+	/**
+	 * Accordion groups.
+	 *
+	 * @return array<string, string>
+	 */
+	public function groups(): array {
+		return array(
+			self::GROUP_DESTINATIONS => __( 'Destinations', 'duracelltomi-google-tag-manager' ),
+			self::GROUP_SENDING      => __( 'Sending events', 'duracelltomi-google-tag-manager' ),
+		);
+	}
+
+	/**
+	 * Field definitions.
+	 *
+	 * @return Field[]
+	 */
+	public function fields(): array {
+		return array(
+			new Field(
+				key: GTM4WP_OPTION_GDM_DESTINATIONS,
+				type: Field::TYPE_TABLE,
+				default_value: array(),
+				label: __( 'Data Manager destinations', 'duracelltomi-google-tag-manager' ),
+				description: esc_html__(
+					'One row per Google Analytics 4 property: its numeric property ID, the measurement ID (G-XXXXXXX) of its web data stream, and a service account with the Editor role on the property. The Test button below the table checks the setup without storing anything.',
+					'duracelltomi-google-tag-manager'
+				),
+				group: self::GROUP_DESTINATIONS,
+				phase: Field::PHASE_EXPERIMENTAL,
+				columns: array(
+					array(
+						'key'         => DestinationRows::COLUMN_LABEL,
+						'label'       => __( 'Label', 'duracelltomi-google-tag-manager' ),
+						'placeholder' => __( 'Optional name', 'duracelltomi-google-tag-manager' ),
+					),
+					array(
+						'key'     => DestinationRows::COLUMN_ACCOUNT,
+						'label'   => __( 'Service account', 'duracelltomi-google-tag-manager' ),
+						'type'    => 'select',
+						// Choices arrive through panel_data()['columnChoices']
+						// at settings-page load; an empty list here means "none
+						// uploaded yet" and the panel says so in words.
+						'choices' => array(),
+					),
+					array(
+						'key'     => DestinationRows::COLUMN_TYPE,
+						'label'   => __( 'Type', 'duracelltomi-google-tag-manager' ),
+						'type'    => 'select',
+						'default' => DestinationRows::TYPE_GA4,
+						'choices' => self::type_choices(),
+					),
+					array(
+						'key'             => DestinationRows::COLUMN_PROPERTY,
+						'label'           => __( 'GA4 property ID', 'duracelltomi-google-tag-manager' ),
+						'placeholder'     => '123456789',
+						// The save-time rule (PROPERTY_PATTERN), handed to the
+						// table so a wrong value is marked while typing.
+						'pattern'         => '^' . DestinationRows::PROPERTY_PATTERN_BODY . '$',
+						'invalid_message' => __( 'The property ID is the all-numeric ID shown in the Google Analytics admin - not the G-XXXXXXX measurement ID.', 'duracelltomi-google-tag-manager' ),
+					),
+					array(
+						'key'             => DestinationRows::COLUMN_MEASUREMENT,
+						'label'           => __( 'Measurement ID', 'duracelltomi-google-tag-manager' ),
+						'placeholder'     => 'G-XXXXXXX',
+						'pattern'         => '^' . DestinationRows::MEASUREMENT_PATTERN_BODY . '$',
+						'invalid_message' => __( 'The measurement ID starts with G-, as shown for the web data stream in the Google Analytics admin.', 'duracelltomi-google-tag-manager' ),
+					),
+				),
+				sanitizer: static function ( $value ) {
+					return self::sanitize_destinations( $value );
+				},
+				doc: self::DOC_PAGE
+			),
+			new Field(
+				key: GTM4WP_OPTION_GDM_SEND_REFUNDS,
+				type: Field::TYPE_CHECKBOX,
+				default_value: false,
+				label: __( 'Send refunds to Google Analytics', 'duracelltomi-google-tag-manager' ),
+				description: esc_html__(
+					'Sends every refund from your store to your destinations, so Google Analytics stops counting revenue you gave back. It also stores Google IDs and the consent state with new orders and sets two cookies for every visitor (gtm4wp_gdm_ids, gtm4wp_gdm_consent): add them to your cookie notice.',
+					'duracelltomi-google-tag-manager'
+				),
+				group: self::GROUP_SENDING,
+				phase: Field::PHASE_EXPERIMENTAL,
+				depends_on: GTM4WP_OPTION_GDM_DESTINATIONS,
+				doc: self::DOC_PAGE
+			),
+			new Field(
+				key: GTM4WP_OPTION_GDM_CONSENT_POLICY,
+				type: Field::TYPE_SELECT,
+				default_value: ConsentPolicy::POLICY_EEA_ONLY,
+				label: __( 'Require consent before sending', 'duracelltomi-google-tag-manager' ),
+				description: esc_html__(
+					'Which orders need analytics storage granted before anything about them is sent to Google, decided by the billing country; an order without one counts as outside these regions. Choose Never only if you have your own lawful basis for the transfer.',
+					'duracelltomi-google-tag-manager'
+				),
+				group: self::GROUP_SENDING,
+				phase: Field::PHASE_EXPERIMENTAL,
+				choices: self::consent_policy_choices(),
+				// With every lane off nothing is captured or sent for this gate to decide on.
+				depends_on: implode( ',', GoogleDataManagerModule::SEND_LANES ),
+				doc: self::DOC_PAGE
+			),
+		);
+	}
+
+	/**
+	 * Choices of the consent policy select.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function consent_policy_choices(): array {
+		return array(
+			ConsentPolicy::POLICY_EEA_ONLY => __( 'Only for buyers in the EEA, the UK and Switzerland (recommended)', 'duracelltomi-google-tag-manager' ),
+			ConsentPolicy::POLICY_ALWAYS   => __( 'For every order', 'duracelltomi-google-tag-manager' ),
+			ConsentPolicy::POLICY_NEVER    => __( 'Never - I assert my own lawful basis', 'duracelltomi-google-tag-manager' ),
+		);
+	}
+
+	/**
+	 * Destination type choices. One entry today; Google Ads joins as a new
+	 * choice, not a new table shape.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function type_choices(): array {
+		return array(
+			DestinationRows::TYPE_GA4 => __( 'Google Analytics 4', 'duracelltomi-google-tag-manager' ),
+		);
+	}
+
+	/**
+	 * Save-time sanitizer of the destinations table: rejecting, not repairing,
+	 * a row that cannot send is named with the reason. Rows where every
+	 * user-filled cell is empty are the untouched "Add row" state (the type
+	 * select arrives seeded, RI-28, so the emptiness test ignores it) and are
+	 * dropped silently; error messages number rows as the screen shows them.
+	 *
+	 * @param mixed $value Raw submitted value.
+	 * @return array<int, array<string, string>>|\WP_Error
+	 */
+	private static function sanitize_destinations( $value ): array|\WP_Error {
+		if ( ! is_array( $value ) ) {
+			return array();
+		}
+
+		$rows      = array();
+		$seen_ids  = array();
+		$vault     = null;
+		$row_index = 0;
+
+		foreach ( $value as $raw_row ) {
+			if ( ! is_array( $raw_row ) ) {
+				continue;
+			}
+
+			$row = DestinationRows::normalize_row( $raw_row );
+
+			++$row_index;
+
+			$user_cells = $row;
+			unset( $user_cells[ DestinationRows::COLUMN_TYPE ] );
+
+			if ( '' === implode( '', $user_cells ) ) {
+				continue;
+			}
+
+			$row[ DestinationRows::COLUMN_LABEL ] = mb_substr(
+				sanitize_text_field( $row[ DestinationRows::COLUMN_LABEL ] ),
+				0,
+				DestinationRows::LABEL_MAX_LENGTH
+			);
+
+			$row_name = ( '' !== $row[ DestinationRows::COLUMN_LABEL ] )
+				? $row[ DestinationRows::COLUMN_LABEL ]
+				: (string) $row_index;
+
+			if ( ! in_array( $row[ DestinationRows::COLUMN_TYPE ], DestinationRows::TYPES, true ) ) {
+				return new \WP_Error(
+					'gtm4wp_gdm_invalid_type',
+					sprintf(
+						/* translators: %s: the label (or number) of the destination row with the invalid value. */
+						__( 'Unknown destination type in destination row %s.', 'duracelltomi-google-tag-manager' ),
+						$row_name
+					)
+				);
+			}
+
+			if ( 1 !== preg_match( DestinationRows::ACCOUNT_PATTERN, $row[ DestinationRows::COLUMN_ACCOUNT ] ) ) {
+				return new \WP_Error(
+					'gtm4wp_gdm_missing_account',
+					sprintf(
+						/* translators: %s: the label (or number) of the destination row with the invalid value. */
+						__( 'Please pick the Google service account of destination row %s. Upload one in the Google service accounts section first if the list is empty.', 'duracelltomi-google-tag-manager' ),
+						$row_name
+					)
+				);
+			}
+
+			// One vault read per save, and only when a row actually names an
+			// account - never on the empty-table path.
+			if ( null === $vault ) {
+				$vault = new KeyVault();
+			}
+
+			if ( ! $vault->has( $row[ DestinationRows::COLUMN_ACCOUNT ] ) ) {
+				return new \WP_Error(
+					'gtm4wp_gdm_unknown_account',
+					sprintf(
+						/* translators: %s: the label (or number) of the destination row with the invalid value. */
+						__( 'The service account selected in destination row %s no longer exists. Please pick another one.', 'duracelltomi-google-tag-manager' ),
+						$row_name
+					)
+				);
+			}
+
+			if ( 1 !== preg_match( DestinationRows::PROPERTY_PATTERN, $row[ DestinationRows::COLUMN_PROPERTY ] ) ) {
+				return new \WP_Error(
+					'gtm4wp_gdm_invalid_property',
+					sprintf(
+						/* translators: %s: the label (or number) of the destination row with the invalid value. */
+						__( 'Invalid GA4 property ID in destination row %s. Enter the numeric property ID shown in the Google Analytics admin.', 'duracelltomi-google-tag-manager' ),
+						$row_name
+					)
+				);
+			}
+
+			if ( 1 !== preg_match( DestinationRows::MEASUREMENT_PATTERN, $row[ DestinationRows::COLUMN_MEASUREMENT ] ) ) {
+				return new \WP_Error(
+					'gtm4wp_gdm_invalid_measurement',
+					sprintf(
+						/* translators: %s: the label (or number) of the destination row with the invalid value. */
+						__( 'Invalid measurement ID in destination row %s. It should have the format G-XXXXXXX, as shown for the web data stream in the Google Analytics admin.', 'duracelltomi-google-tag-manager' ),
+						$row_name
+					)
+				);
+			}
+
+			$measurement = $row[ DestinationRows::COLUMN_MEASUREMENT ];
+			if ( isset( $seen_ids[ $measurement ] ) ) {
+				return new \WP_Error(
+					'gtm4wp_gdm_duplicate_measurement',
+					sprintf(
+						/* translators: %s: the duplicated measurement ID. */
+						__( 'The measurement ID %s is listed in more than one destination row. Every data stream can only be entered once.', 'duracelltomi-google-tag-manager' ),
+						$measurement
+					)
+				);
+			}
+			$seen_ids[ $measurement ] = true;
+
+			$rows[] = $row;
+		}
+
+		return $rows;
+	}
+
+	/**
+	 * The module is always available - an empty destination list is the
+	 * onboarding state, not a missing dependency.
+	 *
+	 * @return string
+	 */
+	public function unavailable_message(): string {
+		return '';
+	}
+
+	/**
+	 * The React panel component rendered below the fields.
+	 *
+	 * @return string
+	 */
+	public function panel(): string {
+		return self::PANEL;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * The rows themselves live in SiteHealth next to the status test, which
+	 * reads the same records: what is safe to show is decided once, there.
+	 * Runs only when the Site Health page is rendered, so the reads are in
+	 * the same cost class as panel_data().
+	 *
+	 * @param Options $options The plugin options service.
+	 * @return array<string, array<string, mixed>>
+	 */
+	public function site_health_info( Options $options ): array {
+		return ( new SiteHealth( $options, new DestinationHealth(), new CaptureStats() ) )->debug_fields();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param Options $options The plugin options service.
+	 * @return array<string, callable>
+	 */
+	public function site_health_tests( Options $options ): array {
+		return array( SiteHealth::TEST_KEY => array( new SiteHealth( $options, new DestinationHealth(), new CaptureStats() ), 'run_test' ) );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * The abilities live in Abilities, next to the REST controller serving
+	 * the same rows. Runs only inside wp_abilities_api_init, so the SendLog
+	 * it builds is in the same cost class as site_health_info().
+	 *
+	 * @return ProviderInterface
+	 */
+	public function abilities(): ProviderInterface {
+		return new Abilities( new SendLog() );
+	}
+
+	/**
+	 * Boot data of the panel. Runs only when the settings page is rendered,
+	 * so this is where the vault and health reads live (see the class doc
+	 * block): the service-account choices of the table's select column and
+	 * the stored per-destination health records.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function panel_data(): array {
+		// An account that cannot send says so in its choice label (#468).
+		$formats = array(
+			/* translators: %s: a Google service account label in the destination's account choices. */
+			KeyVault::STATUS_REUPLOAD => __( '%s (key unreadable, use Replace key)', 'duracelltomi-google-tag-manager' ),
+			/* translators: %s: a Google service account label in the destination's account choices. */
+			KeyVault::STATUS_ERROR    => __( '%s (failed its last test)', 'duracelltomi-google-tag-manager' ),
+		);
+
+		$accounts = array();
+		foreach ( ( new KeyVault() )->all() as $account ) {
+			$label = (string) $account['label'];
+
+			$accounts[ (string) $account['id'] ] = isset( $formats[ $account['status'] ] ) ? sprintf( $formats[ $account['status'] ], $label ) : $label;
+		}
+
+		return array(
+			// The test panel renders inside the destinations tab it belongs to.
+			'panelGroup'    => self::GROUP_DESTINATIONS,
+			'testPath'      => RestCors::REST_NAMESPACE . RestController::REST_ROUTE,
+			'optionKey'     => GTM4WP_OPTION_GDM_DESTINATIONS,
+			'health'        => ( new DestinationHealth() )->all(),
+			'threshold'     => DestinationHealth::FAILURE_THRESHOLD,
+			'logPath'       => RestCors::REST_NAMESPACE . RestController::LOG_ROUTE,
+			'replayPath'    => RestCors::REST_NAMESPACE . RestController::REPLAY_ROUTE,
+			// The send lanes, so the panel can tell "waiting for the first send"
+			// from "nothing is turned on".
+			'sendKeys'      => GoogleDataManagerModule::SEND_LANES,
+			'columnChoices' => array(
+				GTM4WP_OPTION_GDM_DESTINATIONS => array(
+					DestinationRows::COLUMN_ACCOUNT => $accounts,
+				),
+			),
+		);
+	}
+}

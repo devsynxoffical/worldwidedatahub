@@ -1,0 +1,774 @@
+<?php
+/**
+ * Google Tag Manager container code output.
+ *
+ * @package GTM4WP
+ * @author Thomas Geiger
+ * @copyright 2013- Geiger Tamás e.v. (Thomas Geiger s.e.)
+ * @license GNU General Public License, version 3
+ */
+
+namespace GTM4WP\Frontend;
+
+use GTM4WP\Modules\Container\ContainerRows;
+use GTM4WP\Options\Options;
+
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * Outputs the GTM container snippet (head), the noscript/iframe part (body)
+ * and the data layer initialization. Port of gtm4wp_wp_header_top(),
+ * gtm4wp_wp_header_begin(), gtm4wp_get_the_gtm_tag(), gtm4wp_the_gtm_tag(),
+ * gtm4wp_wp_body_open() and gtm4wp_wp_footer() (placement part) from 1.x.
+ *
+ * The "container code written" state lives in the backward compatible
+ * $GLOBALS['gtm4wp_container_code_written'] global so that themes calling
+ * gtm4wp_the_gtm_tag() manually keep their double-output protection.
+ */
+final class ContainerCode {
+
+	/**
+	 * Internal filter that modules use to append inline JavaScript to the
+	 * data layer initialization block in the <head> (e.g. consent tool
+	 * callbacks). The block passes through ScriptTag::print_script_block(),
+	 * whose wp_kses() pass rewrites a bare `<` or `>` and strips tag-like
+	 * spans, so the appended code must contain neither (no `=>`, `>=`, `<`
+	 * comparisons or regex literals) and no literal `&amp;` (#271, RI-3).
+	 *
+	 * @since 2.0.0
+	 */
+	public const FILTER_HEADER_TOP_JS = 'gtm4wp_header_top_inline_js';
+
+	/**
+	 * Filter reporting whether an AMP page is being generated. The AMP
+	 * module makes this return true on AMP requests to suppress the
+	 * standard HTML container output.
+	 *
+	 * @since 2.0.0
+	 */
+	public const FILTER_AMP_RUNNING = 'gtm4wp_amp_running';
+
+	/**
+	 * The Google tag developer ID Google issued to GTM4WP. Pushed as the
+	 * arguments object of `gtag('set', 'developer_id.<id>', true)` before the
+	 * container loads so Google can tell which platform installed the tag (U165).
+	 * The block never names `gtag`: keyword-matching JS delay tools (Flying
+	 * Scripts) would delay the block that declares the data layer.
+	 *
+	 * @since 2.0.3
+	 */
+	public const DEVELOPER_ID = 'dNGJiYT';
+
+	/**
+	 * The two tag_parts() elements the_tag() prints as they are: from 7.2 wp_kses()
+	 * cuts the string at an opening <noscript>, whatever the rule set allows.
+	 */
+	private const NOSCRIPT_TAGS = array( '<noscript>', '</noscript>' );
+
+	/**
+	 * Constructor.
+	 *
+	 * @param Options         $options    The plugin options service.
+	 * @param DataLayer       $datalayer  The data layer service.
+	 * @param ScriptTag       $script_tag The script tag helper.
+	 * @param ConsentDefaults $consent    The consent mode default state service.
+	 */
+	public function __construct(
+		private Options $options,
+		private DataLayer $datalayer,
+		private ScriptTag $script_tag,
+		private ConsentDefaults $consent
+	) {
+	}
+
+	/**
+	 * Registers all frontend hooks of the container code output.
+	 *
+	 * @return void
+	 */
+	public function register_hooks(): void {
+		$header_begin_priority = $this->options->get( GTM4WP_OPTION_LOADEARLY ) ? 2 : 10;
+
+		add_action( 'wp_head', array( $this, 'header_begin' ), $header_begin_priority, 0 );
+		add_action( 'wp_head', array( $this, 'header_top' ), 1, 0 );
+		add_action( 'wp_footer', array( $this, 'footer' ) );
+
+		// To be able to easily migrate from other Google Tag Manager plugins.
+		add_action( 'body_open', array( $this, 'body_open' ) );
+
+		// Compatibility with existing themes that natively support code injection after the opening body tag.
+		add_action( 'genesis_before', array( $this, 'body_open' ) ); // Genesis theme.
+		add_action( 'generate_before_header', array( $this, 'body_open' ), 0 ); // GeneratePress theme.
+		add_action( 'elementor/page_templates/canvas/before_content', array( $this, 'body_open' ) ); // Elementor.
+		add_action( 'ct_before_builder', array( $this, 'body_open' ), 0 ); // Oxygen Builder.
+		add_action( 'fl_before_builder', array( $this, 'body_open' ), 0 ); // Beaver Builder Theme.
+
+		// Standard WP theme support for body open tags.
+		add_action( 'wp_body_open', array( $this, 'body_open' ) );
+
+		// Exclude the data layer variables from WP Rocket JS minification.
+		add_filter( 'rocket_excluded_inline_js_content', array( $this, 'rocket_excluded_inline_js_content' ) );
+	}
+
+	/**
+	 * Helper function to translate the GTM container code placement value into a readable string.
+	 *
+	 * @return string Readable form of a GTM container code placement option.
+	 */
+	public function placement_string(): string {
+		switch ( $this->options->get( GTM4WP_OPTION_GTM_PLACEMENT ) ) {
+			case GTM4WP_PLACEMENT_FOOTER:
+				return 'footer';
+
+			case GTM4WP_PLACEMENT_BODYOPEN:
+				return 'manual';
+
+			case GTM4WP_PLACEMENT_BODYOPEN_AUTO:
+				return 'automatic';
+
+			case GTM4WP_PLACEMENT_OFF:
+				return 'off';
+
+			default:
+				return 'unknown (' . $this->options->get( GTM4WP_OPTION_GTM_PLACEMENT ) . ')';
+		}
+	}
+
+	/**
+	 * Function executed during wp_head with high priority.
+	 * Outputs some global JavaScript variables that need to be accessible by other parts of the plugin.
+	 *
+	 * On an AMP page nothing is output (the AMP module reads
+	 * DataLayer::compiled() instead).
+	 *
+	 * @return void
+	 */
+	public function header_top(): void {
+		$datalayer_name = $this->datalayer->name();
+
+		// 'var', not 'let': 'let' breaks related browser extensions and third party
+		// scripts. The name appears as a string VALUE (json_literal with hex flags)
+		// and as a bare IDENTIFIER, which no escaper can protect; what makes the
+		// latter safe is ContainerRows::datalayer_name() only ever returning a valid
+		// JavaScript identifier (RI-4).
+		$_gtm_top_content = '
+<!-- Google Tag Manager for WordPress by gtm4wp.com -->
+' . $this->script_tag->opening_tag() . '
+	var gtm4wp_datalayer_name = ' . ScriptTag::json_literal( $datalayer_name, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_HEX_APOS ) . ';
+	var ' . $datalayer_name . ' = ' . $datalayer_name . ' || [];
+	(function(){' . $datalayer_name . '.push(arguments);})(\'set\', \'developer_id.' . self::DEVELOPER_ID . '\', true);';
+
+		// Load in the global variables from the gtm4wp_add_global_vars_array / GTM4WP_WPFILTER_ADDGLOBALVARS_ARRAY filter.
+		$added_global_js_vars = (array) apply_filters( GTM4WP_WPFILTER_ADDGLOBALVARS_ARRAY, array() );
+		foreach ( $added_global_js_vars as $js_var_name => $js_var_value ) {
+			// The name becomes a `const <name>` declaration: anything that is not a
+			// valid identifier would be a SyntaxError killing the whole block, and
+			// esc_js() does not validate identifiers, so a non-conforming entry is
+			// skipped. Shared grammar with the data layer name, not a copy (PA-2).
+			$js_var_name = (string) $js_var_name;
+			if ( ! ContainerRows::is_valid_js_identifier( $js_var_name ) ) {
+				continue;
+			}
+
+			$_gtm_top_content .= '
+	const ' . $js_var_name . ' = ' . self::global_var_literal( $js_var_value ) . ';';
+		}
+
+		/**
+		 * Filters the additional inline JavaScript appended to the data layer
+		 * initialization block. Modules (e.g. consent tool integrations) add
+		 * their 1.x-identical code snippets here. The block is sanitized with
+		 * wp_kses(): the JavaScript must contain no `<`, `>` or literal `&amp;`
+		 * (see FILTER_HEADER_TOP_JS), or the whole head block fails to parse.
+		 *
+		 * @since 2.0.0
+		 *
+		 * @param string $inline_js      Additional JavaScript, empty by default.
+		 * @param string $datalayer_name Name of the data layer JS variable.
+		 */
+		$_gtm_top_content .= (string) apply_filters( self::FILTER_HEADER_TOP_JS, '', $datalayer_name );
+
+		$_gtm_top_content .= '
+</script>
+<!-- End Google Tag Manager for WordPress by gtm4wp.com -->';
+
+		if ( ! apply_filters( self::FILTER_AMP_RUNNING, false ) ) {
+			// Through print_script_block(), like header_begin(): wp_kses() alone
+			// would turn every bare & into &amp; and break && in the consent JS
+			// added via FILTER_HEADER_TOP_JS (RI-3).
+			$this->script_tag->print_script_block( $_gtm_top_content );
+		}
+	}
+
+	/**
+	 * Renders one GTM4WP_WPFILTER_ADDGLOBALVARS_ARRAY value as a JavaScript
+	 * literal, dispatching on the ACTUAL type in order - an empty() test first
+	 * used to rewrite null, [] and 0.0 to `false`.
+	 *
+	 * @param mixed $value The filter-supplied value.
+	 * @return string A JavaScript literal, safe for an inline <script> body.
+	 */
+	private static function global_var_literal( $value ): string {
+		if ( is_null( $value ) ) {
+			return 'null';
+		}
+
+		if ( is_bool( $value ) ) {
+			return $value ? 'true' : 'false';
+		}
+
+		if ( is_array( $value ) ) {
+			return ScriptTag::json_literal( $value, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_HEX_APOS );
+		}
+
+		if ( is_int( $value ) || is_float( $value ) ) {
+			return ScriptTag::json_literal( $value, 0 );
+		}
+
+		// Everything else is a JSON string literal with the same hex flags. Not
+		// esc_js(): an HTML-attribute escaper that handed the integrator
+		// &quot;/&lt;/&gt; text instead of characters (RI-4/PA-4, #72).
+		return ScriptTag::json_literal(
+			is_scalar( $value ) ? (string) $value : '',
+			JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_HEX_APOS
+		);
+	}
+
+	/**
+	 * Function executed during wp_head.
+	 * Outputs the main Google Tag Manager container code together with the
+	 * compiled data layer and the consent mode default block.
+	 *
+	 * @return void
+	 */
+	public function header_begin(): void {
+		// On an AMP page the container <script> would be stripped by the AMP
+		// sanitizer; the AMP module injects amp-analytics instead. The data layer
+		// is still compiled so its values, the hook and the global stay available.
+		if ( apply_filters( self::FILTER_AMP_RUNNING, false ) ) {
+			$this->datalayer->compile();
+
+			do_action( GTM4WP_WPACTION_AFTER_DATALAYER );
+
+			return;
+		}
+
+		$no_console_log = (bool) $this->options->get( GTM4WP_OPTION_NOCONSOLELOG );
+		$datalayer_name = $this->datalayer->name();
+		$containers     = $this->containers();
+
+		$this->script_tag->print_script_block( $this->datalayer_block( $containers, $datalayer_name ) );
+
+		do_action( GTM4WP_WPACTION_AFTER_DATALAYER );
+
+		$output_container_code = ( GTM4WP_PLACEMENT_OFF !== $this->options->get( GTM4WP_OPTION_GTM_PLACEMENT ) );
+
+		if ( ! $no_console_log && ! $output_container_code ) {
+			$this->script_tag->print_script_block( $this->console_off_warning() );
+		}
+
+		// Kill switch (production-only option / gtm4wp_output_container filter):
+		// like placement OFF, the data layer stays active, only the loader is skipped.
+		if ( $output_container_code && ! $this->should_output_container() ) {
+			$output_container_code = false;
+
+			if ( ! $no_console_log ) {
+				$this->script_tag->print_script_block( $this->container_suppressed_warning() );
+			}
+		}
+
+		$excluded_role = $this->excluded_user_role();
+		if ( '' !== $excluded_role ) {
+			$output_container_code = false;
+
+			if ( ! $no_console_log ) {
+				$this->script_tag->print_script_block( $this->disabled_role_warning( $excluded_role ) );
+			}
+		}
+
+		if ( $this->consent->enabled() ) {
+			$this->script_tag->print_script_block( $this->consent->script_block( $this->script_tag, $datalayer_name ) );
+		}
+
+		if ( ( array() !== $containers ) && $output_container_code ) {
+			foreach ( $containers as $one_container ) {
+				$one_gtm_id = (string) ( $one_container[ ContainerRows::COLUMN_ID ] ?? '' );
+
+				if ( ! preg_match( ContainerRows::GTM_ID_PATTERN, $one_gtm_id ) ) {
+					continue;
+				}
+
+				$this->script_tag->print_script_block( $this->container_loader( $one_container, $datalayer_name ) );
+			}
+		}
+
+		do_action( GTM4WP_WPACTION_AFTER_CONTAINER_CODE );
+
+		echo '
+<!-- End Google Tag Manager for WordPress by gtm4wp.com -->';
+	}
+
+	/**
+	 * Builds the header comment, the data layer initialization variable and
+	 * the first push of the compiled data layer content. Compiling the data
+	 * layer here also populates the backward compatible global and the
+	 * DataLayer::compiled() cache used by the AMP module.
+	 *
+	 * @param array<int, array<string, string>> $containers     Normalized container rows.
+	 * @param string                            $datalayer_name Data layer JS variable name.
+	 * @return string
+	 */
+	private function datalayer_block( array $containers, string $datalayer_name ): string {
+		$script_tag = '
+<!-- Google Tag Manager for WordPress by gtm4wp.com -->
+<!-- GTM Container placement set to ' . esc_html( $this->placement_string() ) . ' -->';
+
+		// Placement Off is the "data layer only" setup, which needs no container
+		// row (#636); every other placement still compiles nothing unconfigured.
+		if ( array() !== $containers || GTM4WP_PLACEMENT_OFF === $this->options->get( GTM4WP_OPTION_GTM_PLACEMENT ) ) {
+			$gtm4wp_datalayer_data = $this->datalayer->compile();
+
+			// The hex flags encode <, >, &, " and ' as \uXXXX so the JSON can never
+			// break out of the script, whatever print_script_block() does. Do NOT
+			// add JSON_NUMERIC_CHECK: it coerced identifier-like strings (a SKU of
+			// "000035180", postcodes, phone numbers) into numbers; real numbers are
+			// typed at their source instead, like every other sink.
+			// json_object() keeps the top level an object literal: an empty or
+			// list array would encode as `[...]`, which GTM reads as a command
+			// array, not a message. Nested arrays are untouched.
+			$datalayer_json = wp_json_encode( ScriptTag::json_object( $gtm4wp_datalayer_data ), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_HEX_APOS );
+
+			// Omit the whole block on an encode failure (#141, RI-21): false renders
+			// as '' and `var dataLayer_content = ;` is a SyntaxError that would take
+			// every container loader after it. Empty content keeps the variable for
+			// custom code reading it, but is not pushed.
+			if ( false !== $datalayer_json ) {
+				$script_tag .= '
+' . $this->script_tag->opening_tag() . '
+	var dataLayer_content = ' . $datalayer_json . ';';
+
+				if ( array() !== $gtm4wp_datalayer_data ) {
+					$script_tag .= '
+	' . esc_js( $datalayer_name ) . '.push( dataLayer_content );';
+				}
+
+				$script_tag .= '
+</script>';
+			}
+		}
+
+		return $script_tag;
+	}
+
+	/**
+	 * Console warning shown when the container code placement is set to OFF but
+	 * the data layer is still active.
+	 *
+	 * @return string
+	 */
+	private function console_off_warning(): string {
+		return '
+' . $this->script_tag->opening_tag() . '
+	console.warn && console.warn("[GTM4WP] Google Tag Manager container code placement set to OFF !!!");
+	console.warn && console.warn("[GTM4WP] Data layer codes are active but GTM container must be loaded using custom coding !!!");
+</script>';
+	}
+
+	/**
+	 * Console warning shown when the container code is omitted because the
+	 * current user has an excluded role.
+	 *
+	 * @param string $user_role The excluded role that matched the current user.
+	 * @return string
+	 */
+	private function disabled_role_warning( string $user_role ): string {
+		// json_literal(), not esc_js(), for a string VALUE in a <script> body
+		// (PA-4/RI-4). The WHOLE message is encoded so the literal supplies its own
+		// quotes and the line stays byte-identical to 1.x for an ordinary slug (BE-1).
+		$role_message = ScriptTag::json_literal(
+			'[GTM4WP] Google Tag Manager container code was disabled for this user role: ' . $user_role . ' !!!',
+			JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_HEX_APOS
+		);
+
+		return '
+' . $this->script_tag->opening_tag() . '
+	console.warn && console.warn(' . $role_message . ');
+	console.warn && console.warn("[GTM4WP] Logout or login with a user having a different user role!");
+	console.warn && console.warn("[GTM4WP] Data layer codes are active but GTM container code is omitted !!!");
+</script>';
+	}
+
+	/**
+	 * Console warning shown when the container code is suppressed by the
+	 * production-only option or the gtm4wp_output_container filter (the kill
+	 * switch) while the data layer stays active.
+	 *
+	 * @return string
+	 */
+	private function container_suppressed_warning(): string {
+		return '
+' . $this->script_tag->opening_tag() . '
+	console.warn && console.warn("[GTM4WP] Google Tag Manager container code output has been suppressed on this environment !!!");
+	console.warn && console.warn("[GTM4WP] Data layer codes are active but GTM container code is omitted !!!");
+</script>';
+	}
+
+	/**
+	 * Builds the GTM container loader snippet for one container row. The
+	 * domain, path and ID are validated/escaped by their helper methods.
+	 *
+	 * @param array<string, string> $one_container  One normalized container row.
+	 * @param string                $datalayer_name Data layer JS variable name.
+	 * @return string
+	 */
+	private function container_loader( array $one_container, string $datalayer_name ): string {
+		$one_gtm_id = (string) ( $one_container[ ContainerRows::COLUMN_ID ] ?? '' );
+
+		$_gtm_env = $this->container_environment( $one_container );
+
+		// A server-side container serving one container from the loader path
+		// omits the ID from the query string ("?" instead of "?id=").
+		$_gtm_loader_query = $this->container_omit_id( $one_container ) ? '?\'+dl' : '?id=\'+i+dl';
+
+		// The four esc_js() calls below stay on purpose (RI-4 pile b): this is
+		// Google's snippet byte for byte, single-quoted, under BE-1 byte-exact
+		// tests, and each value passes an allow-list that admits no quote before
+		// reaching here (GTM_ID_PATTERN, FILTER_VALIDATE_DOMAIN, PATH_PATTERN,
+		// ContainerRows::datalayer_name()). Those allow-lists are the control; if
+		// one is ever widened to admit a quote, move this block to json_literal().
+		return '
+' . $this->script_tag->opening_tag() . '
+(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({\'gtm.start\':
+new Date().getTime(),event:\'gtm.js\'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!=\'dataLayer\'?\'&l=\'+l:\'\';j.async=true;j.src=
+\'https://' . esc_js( $this->container_domain( $one_container ) ) . '/' . esc_js( $this->container_path( $one_container ) ) . $_gtm_loader_query .
+			( '' !== $_gtm_env ? "+'" . $_gtm_env . "'" : '' ) . ';f.parentNode.insertBefore(j,f);
+})(window,document,\'script\',\'' . esc_js( $datalayer_name ) . '\',\'' . esc_js( $one_gtm_id ) . '\');
+</script>';
+	}
+
+	/**
+	 * Returns a HTML code that includes the noscript/iframe part of the Google Tag Manager container.
+	 * Can be used to manually place the snippet next to the opening body tag if the installed template
+	 * does not support the wp_body_open hook.
+	 *
+	 * @return string The HTML code that includes the noscript/iframe part of the GTM container code.
+	 */
+	public function get_tag(): string {
+		return implode( '', $this->tag_parts() );
+	}
+
+	/**
+	 * The markup of get_tag() as a list, each noscript tag its own element, so
+	 * the_tag() can tell our two literals from sanitized markup without parsing.
+	 *
+	 * @return string[]
+	 */
+	private function tag_parts(): array {
+		$no_console_log = (bool) $this->options->get( GTM4WP_OPTION_NOCONSOLELOG );
+		$containers     = $this->containers();
+		$excluded_role  = $this->excluded_user_role();
+
+		$_gtm_tag = '
+<!-- GTM Container placement set to ' . esc_html( $this->placement_string() ) . ' -->
+<!-- Google Tag Manager (noscript) -->';
+
+		if ( GTM4WP_PLACEMENT_OFF === $this->options->get( GTM4WP_OPTION_GTM_PLACEMENT ) ) {
+			// Placement OFF: mark the code "written" regardless of the console-log
+			// setting so the iframe block below is always skipped.
+			$GLOBALS['gtm4wp_container_code_written'] = true;
+
+			if ( ! $no_console_log ) {
+				$_gtm_tag .= $this->console_off_warning();
+			}
+		} elseif ( ! $this->should_output_container() ) {
+			// Kill switch: same as placement OFF.
+			$GLOBALS['gtm4wp_container_code_written'] = true;
+
+			if ( ! $no_console_log ) {
+				$_gtm_tag .= $this->container_suppressed_warning();
+			}
+		} elseif ( '' !== $excluded_role ) {
+			// The role exclusion must cover this iframe too: it is the same
+			// container by another route, and it used to load for an excluded user
+			// whenever JavaScript was unavailable.
+			$GLOBALS['gtm4wp_container_code_written'] = true;
+
+			if ( ! $no_console_log ) {
+				$_gtm_tag .= $this->disabled_role_warning( $excluded_role );
+			}
+		}
+
+		$parts = array( $_gtm_tag );
+
+		if ( ( array() !== $containers ) && ( ! ( $GLOBALS['gtm4wp_container_code_written'] ?? false ) ) ) {
+			foreach ( $containers as $one_container ) {
+				$one_gtm_id = (string) ( $one_container[ ContainerRows::COLUMN_ID ] ?? '' );
+
+				// esc_attr() per PART at the point of injection (#225); each part is
+				// allow-list validated already, so it exists for the day a pattern is
+				// widened. NOT over the whole src: the environment fragment joins with
+				// a raw '&' on purpose (wp_kses encodes it at output, the 1.x byte
+				// form) and gtm4wp_get_the_gtm_tag() returns this string as public
+				// 1.x API (RI-4).
+				if ( preg_match( ContainerRows::GTM_ID_PATTERN, $one_gtm_id ) ) {
+					array_push(
+						$parts,
+						"\n\t\t\t\t",
+						self::NOSCRIPT_TAGS[0],
+						'<iframe src="https://' . esc_attr( $this->container_domain( $one_container ) ) . '/ns.html?id=' . esc_attr( $one_gtm_id ) . $this->container_environment( $one_container ) . '"
+				height="0" width="0" style="display:none;visibility:hidden" aria-hidden="true"></iframe>',
+						self::NOSCRIPT_TAGS[1]
+					);
+				}
+			}
+
+			$parts[] = '
+<!-- End Google Tag Manager (noscript) -->';
+
+			$GLOBALS['gtm4wp_container_code_written'] = true;
+		}
+
+		return $parts;
+	}
+
+	/**
+	 * Outputs a HTML code that includes the noscript/iframe part of the Google Tag Manager container.
+	 *
+	 * @return void
+	 */
+	public function the_tag(): void {
+		// The iframe style needs `display` and `visibility`; core's safe_style_css
+		// list gained `display` in 7.0 and `visibility` in 7.1, so while the floor
+		// is 6.3 this filter is load-bearing. Drop it only when the floor passes
+		// 7.1. Widened around THIS call only: safe_style_css is a global control,
+		// and a filter left registered would relax wp_kses() for every other call
+		// in the request, including content saved without unfiltered_html.
+		add_filter( 'safe_style_css', array( self::class, 'allow_iframe_hiding_styles' ) );
+
+		try {
+			// print_markup_block(), not bare wp_kses(): a part is the iframe (whose
+			// src must keep &amp;) or a console-warning <script> block, where an
+			// encoded && is a SyntaxError. Only script bodies get the & back.
+			$rules = array_merge(
+				ScriptTag::sanitize_rules(),
+				array(
+					'iframe' => array(
+						'src'         => array(),
+						'height'      => array(),
+						'width'       => array(),
+						'style'       => array(),
+						'aria-hidden' => array(),
+					),
+				)
+			);
+
+			foreach ( $this->tag_parts() as $part ) {
+				if ( in_array( $part, self::NOSCRIPT_TAGS, true ) ) {
+					echo $part; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- one of the two NOSCRIPT_TAGS literals.
+				} else {
+					$this->script_tag->print_markup_block( $part, $rules );
+				}
+			}
+		} finally {
+			// So an exception in the sink cannot leave the allow-list widened.
+			remove_filter( 'safe_style_css', array( self::class, 'allow_iframe_hiding_styles' ) );
+		}
+	}
+
+	/**
+	 * Adds `display` and `visibility` to the wp_kses() CSS allow-list. Public and
+	 * static only so add_filter()/remove_filter() get the same callable; NOT a
+	 * hook to register anywhere - the_tag() adds and removes it around one call.
+	 *
+	 * @param mixed $styles The CSS property allow-list wp_kses() is about to use.
+	 * @return array The allow-list plus `display` and `visibility`.
+	 */
+	public static function allow_iframe_hiding_styles( $styles ): array {
+		$styles   = is_array( $styles ) ? $styles : array();
+		$styles[] = 'display';
+		$styles[] = 'visibility';
+
+		return $styles;
+	}
+
+	/**
+	 * Outputs the noscript/iframe container code right after the opening body tag.
+	 *
+	 * @return void
+	 */
+	public function body_open(): void {
+		$placement = $this->options->get( GTM4WP_OPTION_GTM_PLACEMENT );
+
+		if ( ( GTM4WP_PLACEMENT_BODYOPEN === $placement ) || ( GTM4WP_PLACEMENT_BODYOPEN_AUTO === $placement ) ) {
+			$this->the_tag();
+		}
+	}
+
+	/**
+	 * Inserts the GTM noscript/iframe code in the footer if code placement is set to Footer.
+	 *
+	 * @return void
+	 */
+	public function footer(): void {
+		if ( GTM4WP_PLACEMENT_FOOTER === $this->options->get( GTM4WP_OPTION_GTM_PLACEMENT ) ) {
+			$this->the_tag();
+		}
+	}
+
+	/**
+	 * Excludes the dataLayer variable and gtm4wp* variables from being combined
+	 * into the minified JS file by WP Rocket.
+	 *
+	 * @param array $pattern Patterns to match in inline JS content.
+	 * @return array Patterns extended with the GTM4WP entries.
+	 */
+	public function rocket_excluded_inline_js_content( $pattern ) {
+		$pattern[] = 'dataLayer';
+		$pattern[] = 'gtm4wp';
+		// The consent block names neither once it pushes to a custom data layer
+		// name (#325, RI-34); a fixed plugin token, never the user's identifier.
+		$pattern[] = ConsentDefaults::CONSENT_DEFAULT_COMMAND;
+
+		return $pattern;
+	}
+
+	/**
+	 * Returns the normalized container rows of the GTM4WP_OPTION_GTM_CONTAINERS
+	 * option: one row per container with its own environment parameters,
+	 * custom domain and custom path.
+	 *
+	 * @return array<int, array<string, string>>
+	 */
+	private function containers(): array {
+		return ContainerRows::normalize( $this->options->get( GTM4WP_OPTION_GTM_CONTAINERS, array() ) );
+	}
+
+	/**
+	 * Kill switch: whether the container code (head loader and noscript iframe)
+	 * may be emitted on this request, so a staging copy does not send hits to the
+	 * production container. Two independent gates, both keeping the data layer
+	 * active: the gtm4wp_output_container filter, and the "Only output on
+	 * production environments" option (wp_get_environment_type() === 'production').
+	 *
+	 * @return bool
+	 */
+	private function should_output_container(): bool {
+		/**
+		 * Filters whether the Google Tag Manager container code is output on the
+		 * current request. Return false (e.g. from an mu-plugin on a staging copy)
+		 * to suppress the container while keeping the data layer active.
+		 *
+		 * @since 2.0.0
+		 *
+		 * @param bool $output_container Whether to output the container. Default true.
+		 */
+		if ( ! apply_filters( GTM4WP_WPFILTER_OUTPUT_CONTAINER, true ) ) {
+			return false;
+		}
+
+		return '' === ContainerRows::environment_suppression( $this->options->get( GTM4WP_OPTION_PRODUCTIONONLY ) );
+	}
+
+	/**
+	 * The first role of the current user that the "Exclude user roles" option
+	 * turns the container off for, or ''. Both container sinks ask this (the
+	 * head loader and the noscript iframe) so an excluded role suppresses the
+	 * whole container.
+	 *
+	 * @return string The matching excluded role, or '' when none matches.
+	 */
+	private function excluded_user_role(): string {
+		$disabled_roles = explode( ',', (string) $this->options->get( GTM4WP_OPTION_NOGTMFORLOGGEDIN ) );
+		$current_user   = wp_get_current_user();
+
+		foreach ( (array) ( $current_user->roles ?? array() ) as $user_role ) {
+			if ( in_array( $user_role, $disabled_roles, true ) ) {
+				return (string) $user_role;
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * Returns the environment query string fragment of one container row,
+	 * empty unless both the gtm_auth and gtm_preview parameters are set.
+	 *
+	 * @param array<string, string> $container One container row.
+	 * @return string
+	 */
+	private function container_environment( array $container ): string {
+		$gtm_auth    = (string) ( $container[ ContainerRows::COLUMN_AUTH ] ?? '' );
+		$gtm_preview = (string) ( $container[ ContainerRows::COLUMN_PREVIEW ] ?? '' );
+
+		if ( ( '' === $gtm_auth ) || ( '' === $gtm_preview ) ) {
+			return '';
+		}
+
+		// Re-validated at the sink (PA-2): the values also arrive from a 1.x
+		// migration and the GTM4WP_HARDCODED_GTM_ENV_* constants, bypassing the
+		// admin sanitizer, and a stray & would inject query parameters. Malformed
+		// values are dropped whole; Notices warns the admin.
+		if ( ! preg_match( ContainerRows::AUTH_PATTERN, $gtm_auth )
+			|| ! preg_match( ContainerRows::PREVIEW_PATTERN, $gtm_preview )
+		) {
+			return '';
+		}
+
+		return '&gtm_auth=' . esc_attr( $gtm_auth ) . '&gtm_preview=' . esc_attr( $gtm_preview ) . '&gtm_cookies_win=x';
+	}
+
+	/**
+	 * Whether the container ID is left out of the loader URL. Honored only with a
+	 * custom loader path (server-side GTM selecting the container by path), so
+	 * the default www.googletagmanager.com loader never ends up without an ID.
+	 *
+	 * @param array<string, string> $container One container row.
+	 * @return bool
+	 */
+	private function container_omit_id( array $container ): bool {
+		$no_id       = '' !== (string) ( $container[ ContainerRows::COLUMN_NO_ID ] ?? '' );
+		$custom_path = '' !== (string) ( $container[ ContainerRows::COLUMN_PATH ] ?? '' );
+
+		return $no_id && $custom_path;
+	}
+
+	/**
+	 * Returns the validated GTM container domain of one container row,
+	 * falling back to the default Google domain on invalid custom values.
+	 *
+	 * @param array<string, string> $container One container row.
+	 * @return string
+	 */
+	private function container_domain( array $container ): string {
+		$custom_domain    = (string) ( $container[ ContainerRows::COLUMN_DOMAIN ] ?? '' );
+		$_gtm_domain_test = ( '' === $custom_domain ) ? 'www.googletagmanager.com' : strtolower( $custom_domain );
+		$_gtm_domain_name = filter_var( $_gtm_domain_test, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME );
+
+		if ( false === $_gtm_domain_name ) {
+			return 'www.googletagmanager.com';
+		}
+
+		return $_gtm_domain_name;
+	}
+
+	/**
+	 * Returns the validated GTM container script path of one container row,
+	 * falling back to gtm.js on invalid custom values.
+	 *
+	 * @param array<string, string> $container One container row.
+	 * @return string
+	 */
+	private function container_path( array $container ): string {
+		$custom_path      = (string) ( $container[ ContainerRows::COLUMN_PATH ] ?? '' );
+		$_gtm_domain_path = ( '' === $custom_path ) ? 'gtm.js' : $custom_path;
+
+		// The shared constant, not a retyped copy: the inline duplicate had drifted.
+		if ( ! preg_match( ContainerRows::PATH_PATTERN, $_gtm_domain_path ) ) {
+			return 'gtm.js';
+		}
+
+		return $_gtm_domain_path;
+	}
+}

@@ -1,0 +1,204 @@
+<?php
+/**
+ * WooCommerce purchase tracking fallback.
+ *
+ * @package GTM4WP
+ * @author Thomas Geiger
+ * @copyright 2013- Geiger Tamás e.v. (Thomas Geiger s.e.)
+ * @license GNU General Public License, version 3
+ */
+
+namespace GTM4WP\Modules\WooCommerce;
+
+use GTM4WP\Frontend\DataLayer;
+use GTM4WP\Frontend\ScriptTag;
+use GTM4WP\Options\Options;
+
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * Fallback purchase tracking on the woocommerce_thankyou hook for
+ * customized order received pages where the is_order_received_page()
+ * template tag returns false. Port of gtm4wp_woocommerce_thankyou()
+ * from 1.x, including the _ga_tracked order meta duplicate prevention.
+ */
+final class PurchaseTracking {
+
+	/**
+	 * Constructor.
+	 *
+	 * @param Options     $options      The plugin options service.
+	 * @param ProductData $product_data The product data builder.
+	 * @param DataLayer   $datalayer    The data layer service.
+	 * @param ScriptTag   $script_tag   The script tag helper.
+	 */
+	public function __construct(
+		private Options $options,
+		private ProductData $product_data,
+		private DataLayer $datalayer,
+		private ScriptTag $script_tag
+	) {
+	}
+
+	/**
+	 * Executed during woocommerce_thankyou: fallback purchase data layer for
+	 * customized order received pages where is_order_received_page() is false.
+	 * No visitor check here, unlike
+	 * PageDataLayer::woocommerce_hides_order_from_visitor(): WooCommerce's own
+	 * callers fire this hook only after their visitor gates; a theme, page builder
+	 * or funnel that fires it owns that gate. A printed purchase keeps the page out
+	 * of page caches (#460).
+	 *
+	 * @param int $order_id The ID of the order placed by the user just recently.
+	 * @return void
+	 */
+	public function on_thankyou( $order_id ): void {
+		if ( function_exists( 'is_order_received_page' ) && is_order_received_page() ) {
+			return;
+		}
+
+		// Already fired on the is_order_received_page path.
+		if ( ! empty( $GLOBALS['gtm4wp_woocommerce_purchase_data_pushed'] ) ) {
+			return;
+		}
+
+		if ( $order_id > 0 ) {
+			$order = wc_get_order( $order_id );
+
+			// false, or a refund, for an id that is not an order (#420).
+			if ( ! $order instanceof \WC_Order ) {
+				unset( $order );
+			}
+		}
+
+		$data_layer = array();
+
+		if ( isset( $order ) && $this->product_data->is_order_older_than_max_age( $order ) ) {
+			unset( $order );
+		}
+
+		$order_items = null;
+
+		// Printed only with the purchase below: an already tracked or not yet
+		// trackable order gets no orderData on this hook (#603).
+		if ( isset( $order ) && $this->options->get( GTM4WP_OPTION_INTEGRATE_WCORDERDATA ) ) {
+			$order_items = $this->product_data->process_order_items( $order );
+			$order_data  = $this->product_data->get_raw_order_datalayer( $order, $order_items );
+
+			if ( array() !== $order_data ) {
+				$data_layer['orderData'] = $order_data;
+			}
+		}
+
+		// The canonical eligibility gauntlet; the separate age check above only
+		// keeps orderData off too-old orders as well.
+		if ( isset( $order ) && ! $this->product_data->is_order_trackable( $order, (int) $order_id ) ) {
+			// An order that is here before its status became trackable (a gateway
+			// confirming the payment by webhook a moment after the redirect) is
+			// remembered so the reliable-purchase fallback re-checks it on the
+			// buyer's next page views. remember_order() fires on this same hook
+			// right after, but it refuses a non-trackable status by design, so
+			// this is the only seed such an order gets. The request-scoped
+			// "pushed" flag stays down: nothing was pushed.
+			$this->product_data->remember_if_may_become_trackable( $order, (int) $order_id );
+			unset( $order );
+		}
+
+		if ( isset( $order ) ) {
+			$data_layer = array_merge( $data_layer, $this->product_data->customer_signals( $order ) );
+
+			$data_layer = array_merge(
+				$data_layer,
+				$this->product_data->get_purchase_datalayer( $order, $order_items )
+			);
+
+			$datalayer_name = $this->datalayer->name();
+			$clear_js       = (bool) $this->options->get( GTM4WP_OPTION_INTEGRATE_WCCLEARECOMMERCEDL )
+				? \GTM4WP\Ecommerce\Helpers::clear_ecommerce_js( $datalayer_name )
+				: '';
+
+			// An unencodable payload (a filter can inject INF/NAN, a resource) must
+			// not be flagged as tracked (#141, RI-21): false would concatenate as
+			// `.push()` and the purchase would be suppressed permanently. Bailing
+			// leaves the order un-flagged, so the next request tries again.
+			$encoded_data_layer = wp_json_encode( $data_layer, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_HEX_APOS );
+
+			if ( false === $encoded_data_layer ) {
+				return;
+			}
+
+			$script_tag = '
+' . $this->script_tag->opening_tag() . '
+	window.' . esc_js( $datalayer_name ) . ' = window.' . esc_js( $datalayer_name ) . ' || [];' . $clear_js . '
+	window.' . esc_js( $datalayer_name ) . '.push(' . $encoded_data_layer . ');
+</script>';
+
+			\GTM4WP\Ecommerce\Helpers::keep_out_of_page_caches();
+
+			$this->script_tag->print_script_block( $script_tag );
+
+			// Flag only a purchase that was really printed: a filter can drop the
+			// event, and a flagged order is suppressed for good (#412, #592).
+			if ( null === \GTM4WP\Ecommerce\Helpers::purchase_event( $data_layer ) ) {
+				return;
+			}
+
+			$this->product_data->flag_order_tracked( $order );
+
+			// Mark the purchase handled for THIS request: remember_order() runs on
+			// this same hook right after and must not re-arm the fallback.
+			$GLOBALS['gtm4wp_woocommerce_purchase_data_pushed'] = true;
+		}
+	}
+
+	/**
+	 * Remembers a placed order in the WooCommerce session so the reliable-purchase
+	 * fallback can emit its purchase on the next page. Hooked (when "purchase on
+	 * any page" or the custom order-received page is on) to
+	 * woocommerce_payment_complete, woocommerce_order_status_changed and
+	 * woocommerce_thankyou, which together cover every payment method. Only
+	 * trackable-status orders are remembered from here. The one still-pending
+	 * order that IS remembered is the one the customer carries to an
+	 * order-received render before the gateway's webhook confirms the payment:
+	 * that render seeds it itself (ProductData::remember_if_may_become_trackable()),
+	 * because the later status change runs in the gateway's server-to-server
+	 * request, which has no access to the buyer's session.
+	 *
+	 * @param int $order_id The id of the order that reached a placed/paid state.
+	 * @return void
+	 */
+	public function remember_order( $order_id ): void {
+		// A render that already emitted the purchase inline must not re-arm the
+		// fallback for the same order: the order-received render consumes the
+		// marker in wp_head and this hook fires later in the body.
+		if ( ! empty( $GLOBALS['gtm4wp_woocommerce_purchase_data_pushed'] ) ) {
+			return;
+		}
+
+		$order_id = absint( $order_id );
+		if ( $order_id <= 0 ) {
+			return;
+		}
+
+		$woo = function_exists( 'WC' ) ? WC() : null;
+		if ( ! $woo || empty( $woo->session ) ) {
+			return;
+		}
+
+		$order = wc_get_order( $order_id );
+		if ( ! ( $order instanceof \WC_Order ) ) {
+			return;
+		}
+
+		// Deliberately the status leg alone, not the full gauntlet: "Do not flag
+		// orders as being tracked" disables the tracked-order suppressors by
+		// design, and the age gate is applied where the marker is read. A
+		// still-pending order is not seeded from here; the order-received renders
+		// remember such an order themselves (ProductData::remember_if_may_become_trackable()).
+		if ( ! $this->product_data->is_order_status_trackable( $order ) ) {
+			return;
+		}
+
+		$this->product_data->remember_pending_purchase( $order_id );
+	}
+}

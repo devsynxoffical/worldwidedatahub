@@ -1,0 +1,39 @@
+.banner-title h2 {
+    font-size: 33px;
+    margin: 0px;
+}
+
+.banner-title ul {
+    margin: 0px;
+    padding: 0px;
+    display: inline-block;
+}
+
+.banner-title ul li {
+    list-style: none;
+    float: left;
+}
+
+.banner-title ul:after {content: '';display: table;clear: both;}
+
+.banner-title ul li a {
+    text-decoration: none;
+    color: #556574;
+    padding-right: 10px;
+    border-right: 1px solid #556574;
+    margin-right: 10px;
+}
+
+.banner-title ul li:last-child a {
+    border: none;
+    margin-right: 0px;
+}
+
+.banner-title {
+    text-align: center;
+}
+
+.inner-banner {
+    padding: 20px 0px;
+}
+

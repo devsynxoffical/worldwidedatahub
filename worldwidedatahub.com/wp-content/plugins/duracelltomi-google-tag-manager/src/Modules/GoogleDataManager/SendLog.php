@@ -1,0 +1,770 @@
+<?php
+/**
+ * Diagnostics ring of the Google Data Manager send lanes.
+ *
+ * @package GTM4WP
+ * @author Thomas Geiger
+ * @copyright 2013- Geiger Tamás e.v. (Thomas Geiger s.e.)
+ * @license GNU General Public License, version 3
+ */
+
+namespace GTM4WP\Modules\GoogleDataManager;
+
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * Remembers the last few sends: what, where to, whether Google took it and,
+ * once the asynchronous processing finishes, what Google did with it. The
+ * send lane is otherwise invisible (a cron job minutes later, a result in
+ * Analytics a day later). Deliberately NOT stored: access tokens, key material,
+ * request or raw response bodies - an error body can echo what we sent, and
+ * this log is pasted into public support threads. A single option row
+ * rewritten per entry; a lost entry under concurrent writes is acceptable here
+ * (the idempotency meta lives on the refund object for that reason).
+ */
+final class SendLog {
+
+	/**
+	 * Option row holding the ring; non-autoloaded, deleted by uninstall.php.
+	 */
+	public const OPTION_NAME = 'gtm4wp_gdm_send_log';
+
+	/**
+	 * Ring size: covers a store's recent refunds and their retries in a few kilobytes.
+	 */
+	public const MAX_ENTRIES = 50;
+
+	/**
+	 * Feature name of a server-side refund event.
+	 */
+	public const FEATURE_REFUND = 'refund';
+
+	/**
+	 * Outcome: Google accepted the request (HTTP 200). Whether it applied the
+	 * event is a separate question, answered later by the status poll.
+	 */
+	public const OUTCOME_ACCEPTED = 'accepted';
+
+	/**
+	 * Outcome: the request failed and will be retried.
+	 */
+	public const OUTCOME_RETRYING = 'retrying';
+
+	/**
+	 * Outcome: nothing more will be tried - the error says the request itself
+	 * is wrong, the retries ran out, or the job could not be queued.
+	 */
+	public const OUTCOME_FAILED = 'failed';
+
+	/**
+	 * Outcome: nothing was sent, on purpose. The reason says which rule
+	 * stopped it (a consent reason code, a missing client id, a veto).
+	 */
+	public const OUTCOME_SKIPPED = 'skipped';
+
+	/**
+	 * Outcome: a replay queued the send and the background job has not run
+	 * yet. The job's own rows supersede it: the sender writes one for every
+	 * destination it sends, skips or finds already sent. One older than
+	 * QUEUED_STALE_AFTER with nothing newer was not processed - a stalled
+	 * queue, or "Send refunds to Google Analytics" switched off before the job
+	 * ran (no handler is hooked then, so the job is dropped rowless and stays
+	 * replayable) - and may be queued again (#388).
+	 */
+	public const OUTCOME_QUEUED = 'queued';
+
+	/**
+	 * Seconds after which a queued row no longer blocks a replay; the queue
+	 * normally runs a job within a minute.
+	 */
+	public const QUEUED_STALE_AFTER = 900;
+
+	/**
+	 * Tone: nothing needs looking at - Google applied the event.
+	 */
+	public const TONE_OK = 'ok';
+
+	/**
+	 * Tone: sent, and nothing is known about it yet. Every accepted request
+	 * spends its first half hour here.
+	 */
+	public const TONE_PENDING = 'pending';
+
+	/**
+	 * Tone: no data was lost yet, but somebody should look - a refund the lane
+	 * deliberately skipped, a send being retried, a partial result.
+	 */
+	public const TONE_WARN = 'warn';
+
+	/**
+	 * Tone: this event did not arrive.
+	 */
+	public const TONE_ERROR = 'error';
+
+	/**
+	 * Skip reasons a configuration change can put right, so the refund is
+	 * worth queueing again. The missing-id reasons, the empty refund and the
+	 * zero-value refund are deliberately absent: no setting can produce an id
+	 * that was never captured, nor change a basis frozen at purchase time.
+	 * Both lists name the senders' constants; the values themselves are stored
+	 * in the ring and matched by the settings screen, so they are not free to
+	 * change (#398).
+	 *
+	 * @var string[]
+	 */
+	private const REPLAYABLE_SKIPS = array(
+		RefundSender::REASON_NO_DESTINATION,
+		ConsentPolicy::REASON_UNKNOWN,
+		ConsentPolicy::REASON_DENIED,
+		RefundSender::REASON_VETOED,
+		RefundSender::REASON_REFUND_UNREADABLE,
+		RefundSender::REASON_NOT_PRODUCTION,
+	);
+
+	/**
+	 * Skip reasons that are information, not problems: the refund reached the
+	 * destination before, or the destination is no longer configured. Drawn as
+	 * a success and kept out of problems_only; never replayable.
+	 *
+	 * @var string[]
+	 */
+	private const INFORMATIONAL_SKIPS = array(
+		RefundSender::REASON_ALREADY_SENT,
+		RefundSender::REASON_DESTINATION_REMOVED,
+	);
+
+	/**
+	 * Skips that are expected and never replayable: drawn as warnings, but
+	 * trimmed like routine rows, oldest first, or a ring of them would evict
+	 * every success and queued row as it lands (#395).
+	 *
+	 * @var string[]
+	 */
+	private const EXPECTED_SKIPS = array(
+		RefundSender::REASON_NO_CLIENT_ID,
+		RefundSender::REASON_CONSENT_NO_CLIENT_ID,
+		RefundSender::REASON_EMPTY_REFUND,
+		RefundSender::REASON_ZERO_VALUE,
+	);
+
+	/**
+	 * The reference grammar parse_reference() accepts, for input schemas
+	 * (platform:order:refund).
+	 */
+	public const REFERENCE_PATTERN = '^[^:]+:[0-9]+:[0-9]+$';
+
+	/**
+	 * Longest stored reason / error summary, in characters (200 cut the
+	 * plugin's own NOT_FOUND explanation mid-sentence; a cut is now marked).
+	 */
+	public const REASON_MAX_LENGTH = 400;
+
+	/**
+	 * Longest stored order or refund reference; keeps a crafted order number
+	 * from stretching the row.
+	 */
+	private const REFERENCE_MAX_LENGTH = 60;
+
+	/**
+	 * Longest stored requestId. It is the status poll's match key, so it is
+	 * capped apart from the display fields and compared after the same cap (#478).
+	 */
+	private const REQUEST_ID_MAX_LENGTH = 200;
+
+	/**
+	 * Clock, injectable so tests can pin stored timestamps.
+	 *
+	 * @var callable|null
+	 */
+	private $clock;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param callable|null $clock Returns the current Unix time; null uses time().
+	 */
+	public function __construct( $clock = null ) {
+		$this->clock = $clock;
+	}
+
+	/**
+	 * Appends one entry, making room for it when the ring is full.
+	 *
+	 * @param array<string, mixed> $entry Entry fields; unknown keys are dropped by clean_entry().
+	 * @return void
+	 */
+	public function record( array $entry ): void {
+		$entries   = $this->read();
+		$entries[] = $this->clean_entry( $entry );
+
+		$this->write( self::trim( $entries, 1 ) );
+	}
+
+	/**
+	 * Records that a replay queued one refund: a row per destination named in
+	 * `only`, or one refund-level row when the whole refund was queued.
+	 *
+	 * @param string   $reference    The refund reference.
+	 * @param string[] $destinations The job's `only` list; empty for the whole refund.
+	 * @return void
+	 */
+	public function record_queued( string $reference, array $destinations ): void {
+		$entries = $this->read();
+
+		$targets = array() === $destinations ? array( '' ) : $destinations;
+
+		foreach ( $targets as $destination ) {
+			$entries[] = $this->clean_entry(
+				array(
+					'feature'     => self::FEATURE_REFUND,
+					'reference'   => $reference,
+					'destination' => $destination,
+					'outcome'     => self::OUTCOME_QUEUED,
+					'attempt'     => 1,
+				)
+			);
+		}
+
+		$this->write( self::trim( $entries, count( $targets ) ) );
+	}
+
+	/**
+	 * The ring cut back to MAX_ENTRIES, dropping routine sends before problems:
+	 * a batch of successful refunds must not push this morning's failure out
+	 * before anybody looked at it. A problem is dropped only when the ring holds
+	 * nothing else; order is never changed. The rows this write appended are
+	 * never the routine ones dropped: with a ring of problems they would vanish
+	 * as they land, success and queued rows included (#395).
+	 *
+	 * @param array<int, array<string, mixed>> $entries  Entries, oldest first.
+	 * @param int                              $appended How many trailing entries this write appended.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private static function trim( array $entries, int $appended ): array {
+		$excess = count( $entries ) - self::MAX_ENTRIES;
+
+		if ( $excess <= 0 ) {
+			return $entries;
+		}
+
+		// Oldest first, routine ones only, never the rows just appended.
+		foreach ( array_slice( array_keys( $entries ), 0, max( 0, count( $entries ) - $appended ) ) as $index ) {
+			if ( $excess <= 0 ) {
+				break;
+			}
+
+			$tone     = self::tone( $entries[ $index ] );
+			$expected = self::OUTCOME_SKIPPED === ( $entries[ $index ]['outcome'] ?? '' )
+				&& in_array( $entries[ $index ]['reason'] ?? '', self::EXPECTED_SKIPS, true );
+
+			if ( ( self::TONE_WARN === $tone || self::TONE_ERROR === $tone ) && ! $expected ) {
+				continue;
+			}
+
+			unset( $entries[ $index ] );
+			--$excess;
+		}
+
+		$entries = array_values( $entries );
+
+		// A ring of nothing but problems must still give way to the new entry.
+		if ( count( $entries ) > self::MAX_ENTRIES ) {
+			$entries = array_slice( $entries, -self::MAX_ENTRIES );
+		}
+
+		return $entries;
+	}
+
+	/**
+	 * Writes the outcome of a status poll back onto the entries of one request,
+	 * keyed by the API's requestId; one request can cover several destinations.
+	 *
+	 * @param string                                                                             $request_id The requestId of the send.
+	 * @param array<int, array{measurement: string, status: string, errors: int, warnings: int}> $statuses   Per-destination statuses.
+	 * @return void
+	 */
+	public function record_status( string $request_id, array $statuses ): void {
+		if ( '' === $request_id ) {
+			return;
+		}
+
+		$by_measurement = array();
+		foreach ( $statuses as $status ) {
+			if ( is_array( $status ) && isset( $status['measurement'] ) ) {
+				$by_measurement[ (string) $status['measurement'] ] = $status;
+			}
+		}
+
+		$entries = $this->read();
+		$changed = false;
+		$key     = $this->text( $request_id, self::REQUEST_ID_MAX_LENGTH );
+
+		foreach ( $entries as $index => $entry ) {
+			if ( ( $entry['request_id'] ?? '' ) !== $key ) {
+				continue;
+			}
+
+			$status = $by_measurement[ (string) ( $entry['destination'] ?? '' ) ] ?? null;
+
+			if ( null === $status ) {
+				continue;
+			}
+
+			// Through the same cleaner as every other text member (#244).
+			$result   = $this->text( $status['status'] ?? '', self::REASON_MAX_LENGTH );
+			$errors   = max( 0, (int) ( $status['errors'] ?? 0 ) );
+			$warnings = max( 0, (int) ( $status['warnings'] ?? 0 ) );
+
+			// A poll that learns nothing new writes nothing.
+			if ( ( ( $entry['result'] ?? '' ) === $result )
+				&& ( (int) ( $entry['errors'] ?? 0 ) === $errors )
+				&& ( (int) ( $entry['warnings'] ?? 0 ) === $warnings )
+			) {
+				continue;
+			}
+
+			$entries[ $index ]['result']   = $result;
+			$entries[ $index ]['errors']   = $errors;
+			$entries[ $index ]['warnings'] = $warnings;
+			$changed                       = true;
+		}
+
+		if ( $changed ) {
+			$this->write( $entries );
+		}
+	}
+
+	/**
+	 * How much attention one entry deserves, in four steps the settings screen
+	 * renders as colour. Decided here, not in the admin bundle, so Google's
+	 * requestStatus vocabulary (U136) has one copy, in EventsIngest. Written as
+	 * "terminal but not a success deserves a look", not as a list of failure
+	 * names, so a status Google adds later is never drawn as a success (UC-5).
+	 *
+	 * @param array<string, mixed> $entry One stored entry.
+	 * @return string One of the TONE_* values.
+	 */
+	public static function tone( array $entry ): string {
+		$outcome = (string) ( $entry['outcome'] ?? '' );
+		$result  = (string) ( $entry['result'] ?? '' );
+
+		if ( self::OUTCOME_FAILED === $outcome ) {
+			return self::TONE_ERROR;
+		}
+
+		if ( self::OUTCOME_SKIPPED === $outcome && in_array( (string) ( $entry['reason'] ?? '' ), self::INFORMATIONAL_SKIPS, true ) ) {
+			return self::TONE_OK;
+		}
+
+		if ( self::OUTCOME_SKIPPED === $outcome || self::OUTCOME_RETRYING === $outcome ) {
+			return self::TONE_WARN;
+		}
+
+		if ( self::OUTCOME_QUEUED === $outcome ) {
+			return self::TONE_PENDING;
+		}
+
+		if ( (int) ( $entry['errors'] ?? 0 ) > 0 ) {
+			return self::TONE_ERROR;
+		}
+
+		// Accepted and still processing: the normal state of a fresh row.
+		if ( ! EventsIngest::is_terminal_status( $result ) ) {
+			return self::TONE_PENDING;
+		}
+
+		if ( EventsIngest::STATUS_SUCCESS !== $result || (int) ( $entry['warnings'] ?? 0 ) > 0 ) {
+			return self::TONE_WARN;
+		}
+
+		return self::TONE_OK;
+	}
+
+	/**
+	 * Whether an entry is worth queueing again: a failed send always (the retry
+	 * ladder is finite), a skip when a configuration change can fix its reason.
+	 *
+	 * @param array<string, mixed> $entry One stored entry.
+	 * @return bool
+	 */
+	public static function is_replayable( array $entry ): bool {
+		$outcome = (string) ( $entry['outcome'] ?? '' );
+
+		if ( self::OUTCOME_FAILED === $outcome ) {
+			return true;
+		}
+
+		return ( self::OUTCOME_SKIPPED === $outcome )
+			&& in_array( (string) ( $entry['reason'] ?? '' ), self::REPLAYABLE_SKIPS, true );
+	}
+
+	/**
+	 * What a replay would queue, one job per refund. The ring holds a row per
+	 * destination per attempt, so only the NEWEST row per destination counts,
+	 * and the job names exactly the destinations still failing in `only`, so a
+	 * destination that already took the event is never sent it twice. While a
+	 * destination is a retry target the job stays scoped to those, even when a
+	 * refund-level row is newer: a whole job would meet the sent marker of a
+	 * partial accept and answer already_sent unsent (#601). Only with no such
+	 * destination does a refund whose newest word is a replayable skip (or a
+	 * stale whole queued job) go whole. A job not yet run is left alone.
+	 *
+	 * @param string[] $references Limit to these references; empty means every replayable refund.
+	 * @return array<string, array{platform: string, order_id: int, refund_id: int, only: string[]}> Keyed by reference.
+	 */
+	public function replay_plan( array $references = array() ): array {
+		$all    = $this->all();
+		$latest = array();
+		$order  = array();
+
+		foreach ( $all as $index => $entry ) {
+			$reference = (string) ( $entry['reference'] ?? '' );
+
+			if ( '' === $reference || ( array() !== $references && ! in_array( $reference, $references, true ) ) ) {
+				continue;
+			}
+
+			$destination = (string) ( $entry['destination'] ?? '' );
+
+			// Oldest first, so the last write for a key is the newest row.
+			$latest[ $reference ][ $destination ] = array( 'index' => $index ) + $entry;
+			$order[ $reference ]                  = $index;
+		}
+
+		$plan = array();
+		$now  = $this->now();
+
+		foreach ( $latest as $reference => $by_destination ) {
+			$parsed = self::parse_reference( $reference );
+
+			if ( null === $parsed ) {
+				continue;
+			}
+
+			// A job still waiting in the queue is not queued a second time: its
+			// rows are the newest word about the refund until the job writes.
+			$newest_entry = $all[ $order[ $reference ] ];
+
+			if ( self::is_waiting( $newest_entry, $now ) ) {
+				continue;
+			}
+
+			$only = array();
+
+			foreach ( $by_destination as $destination => $entry ) {
+				if ( '' !== $destination && self::is_retry_target( $entry, $now ) ) {
+					$only[] = $destination;
+				}
+			}
+
+			if ( array() !== $only ) {
+				$plan[ $reference ] = $parsed + array( 'only' => $only );
+
+				continue;
+			}
+
+			// The refund-level row (a skip carries no destination) decides only
+			// when it is the newest word and no destination is a retry target.
+			$whole = $by_destination[''] ?? null;
+
+			if ( null !== $whole
+				&& (int) $whole['index'] === (int) $order[ $reference ]
+				&& ( self::is_replayable( $whole ) || self::OUTCOME_QUEUED === (string) ( $whole['outcome'] ?? '' ) )
+			) {
+				$plan[ $reference ] = $parsed + array( 'only' => array() );
+			}
+		}
+
+		return $plan;
+	}
+
+	/**
+	 * Whether a row is a queued job that has not had time to run yet.
+	 *
+	 * @param array<string, mixed> $entry One stored entry.
+	 * @param int                  $now   Current Unix time.
+	 * @return bool
+	 */
+	private static function is_waiting( array $entry, int $now ): bool {
+		return self::OUTCOME_QUEUED === (string) ( $entry['outcome'] ?? '' )
+			&& ( $now - (int) ( $entry['time'] ?? 0 ) ) < self::QUEUED_STALE_AFTER;
+	}
+
+	/**
+	 * Whether a destination's newest row puts it in a replay's `only` list: a
+	 * failure, a queued row the job never overtook (a waiting one never gets
+	 * here), or a retry overdue by QUEUED_STALE_AFTER: its job never ran (the
+	 * lane switched off, a lost action), so nothing else will move it (#473).
+	 *
+	 * @param array<string, mixed> $entry One stored entry.
+	 * @param int                  $now   Current Unix time.
+	 * @return bool
+	 */
+	private static function is_retry_target( array $entry, int $now ): bool {
+		$outcome = (string) ( $entry['outcome'] ?? '' );
+
+		if ( self::OUTCOME_RETRYING === $outcome ) {
+			$due = (int) ( $entry['time'] ?? 0 ) + (int) SendQueue::retry_delay( (int) ( $entry['attempt'] ?? 1 ) );
+
+			return ( $now - $due ) >= self::QUEUED_STALE_AFTER;
+		}
+
+		return self::OUTCOME_FAILED === $outcome || self::OUTCOME_QUEUED === $outcome;
+	}
+
+	/**
+	 * Which stored entries a replay would act on, by index in all(). Derived
+	 * from replay_plan() rather than judged row by row, so an overtaken failed
+	 * row never advertises a replay the plan would not perform.
+	 *
+	 * @return array<int, true> Indices of the replayable entries.
+	 */
+	public function replayable_entries(): array {
+		$plan   = $this->replay_plan();
+		$newest = array();
+
+		foreach ( $this->all() as $index => $entry ) {
+			$reference = (string) ( $entry['reference'] ?? '' );
+
+			if ( ! isset( $plan[ $reference ] ) ) {
+				continue;
+			}
+
+			$destination = (string) ( $entry['destination'] ?? '' );
+			$targets     = $plan[ $reference ]['only'];
+
+			$wanted = ( array() === $targets )
+				? ( '' === $destination )
+				: in_array( $destination, $targets, true );
+
+			if ( $wanted ) {
+				// Last write wins (newest row); neither part can contain a pipe.
+				$newest[ $reference . '|' . $destination ] = $index;
+			}
+		}
+
+		return array_fill_keys( array_values( $newest ), true );
+	}
+
+	/**
+	 * Whether the newest row about one refund and destination says Google
+	 * took it. The sender's guard against sending a destination the same
+	 * event twice when a replay is queued for one that already recovered.
+	 *
+	 * @param string $reference   The refund reference.
+	 * @param string $measurement The destination.
+	 * @return bool
+	 */
+	public function latest_is_accepted( string $reference, string $measurement ): bool {
+		$newest = null;
+
+		foreach ( $this->all() as $entry ) {
+			if ( (string) ( $entry['reference'] ?? '' ) === $reference
+				&& (string) ( $entry['destination'] ?? '' ) === $measurement
+			) {
+				$newest = $entry;
+			}
+		}
+
+		return null !== $newest && self::OUTCOME_ACCEPTED === (string) ( $newest['outcome'] ?? '' );
+	}
+
+	/**
+	 * The three ids inside a stored reference, or null when it is not one.
+	 *
+	 * The reference is written by RefundData::reference() as
+	 * platform:order_id:refund_id, and the platform ids carry no colon.
+	 *
+	 * @param string $reference A stored reference.
+	 * @return array{platform: string, order_id: int, refund_id: int}|null
+	 */
+	public static function parse_reference( string $reference ): ?array {
+		// REFERENCE_PATTERN says the same for the input schemas; keep them in step.
+		$parts = explode( ':', $reference );
+
+		if ( 3 !== count( $parts ) || '' === $parts[0] || ! ctype_digit( $parts[1] ) || ! ctype_digit( $parts[2] ) ) {
+			return null;
+		}
+
+		return array(
+			'platform'  => $parts[0],
+			'order_id'  => (int) $parts[1],
+			'refund_id' => (int) $parts[2],
+		);
+	}
+
+	/**
+	 * Every stored entry, oldest first.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function all(): array {
+		return $this->read();
+	}
+
+	/**
+	 * The ring as a reader wants it: newest first, as stored (what may be in
+	 * it is decided where it is written), plus the derived fields: `tone`, how
+	 * much attention the row deserves, raised to warn for a queued job the
+	 * queue never ran and for `status_unknown`; `replayable`, whether a replay
+	 * would act on it; `waiting`, a queued row with nothing newer about its
+	 * refund yet (the settings screen refreshes itself while one is); and
+	 * `status_unknown`, an accepted row past the poll window with no final
+	 * answer. `replayable` comes from the replay plan rather than from the row
+	 * alone, so a failure a later success has overtaken does not offer a replay
+	 * that would queue nothing. The one shaping shared by the settings screen's
+	 * REST route and the ability.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function entries_for_display(): array {
+		$entries    = array();
+		$replayable = $this->replayable_entries();
+		$all        = $this->all();
+		$newest     = array();
+		$now        = $this->now();
+
+		// The rows one replay writes share a time; a newer row about the same
+		// refund means the job has run.
+		foreach ( $all as $index => $entry ) {
+			$newest[ (string) ( $entry['reference'] ?? '' ) ] = $index;
+		}
+
+		foreach ( array_reverse( $all, true ) as $index => $entry ) {
+			$last = $all[ $newest[ (string) ( $entry['reference'] ?? '' ) ] ];
+
+			$entry['tone']       = self::tone( $entry );
+			$entry['replayable'] = isset( $replayable[ $index ] );
+			$entry['waiting']    = self::is_waiting( $entry, $now ) && self::is_waiting( $last, $now );
+
+			// A queued job the queue never ran needs a look, unlike a waiting one.
+			if ( self::OUTCOME_QUEUED === (string) ( $entry['outcome'] ?? '' ) && $entry['replayable'] ) {
+				$entry['tone'] = self::TONE_WARN;
+			}
+
+			// Polling ended without a final answer (sending switched off, still
+			// processing at the cap, no status reply), so pending would never
+			// resolve (#640). One poll interval of grace for a late cron run.
+			$entry['status_unknown'] = self::OUTCOME_ACCEPTED === (string) ( $entry['outcome'] ?? '' )
+				&& self::TONE_PENDING === $entry['tone']
+				&& ( $now - (int) ( $entry['time'] ?? $now ) ) > StatusPoller::MAX_ELAPSED + StatusPoller::MAX_INTERVAL;
+			if ( $entry['status_unknown'] ) {
+				$entry['tone'] = self::TONE_WARN;
+			}
+
+			$entries[] = $entry;
+		}
+
+		return $entries;
+	}
+
+	/**
+	 * Empties the ring.
+	 *
+	 * @return void
+	 */
+	public function clear(): void {
+		$this->write( array() );
+	}
+
+	/**
+	 * Coerces an entry to the stored shape, capping and sanitizing every text
+	 * field. Built as an allow-list of members so a caller cannot widen what
+	 * the log carries by passing extra keys.
+	 *
+	 * @param array<string, mixed> $entry Raw entry.
+	 * @return array<string, mixed>
+	 */
+	private function clean_entry( array $entry ): array {
+		return array(
+			'time'        => isset( $entry['time'] ) ? (int) $entry['time'] : $this->now(),
+			'feature'     => $this->text( $entry['feature'] ?? '', self::REFERENCE_MAX_LENGTH ),
+			'reference'   => $this->text( $entry['reference'] ?? '', self::REFERENCE_MAX_LENGTH ),
+			'destination' => $this->text( $entry['destination'] ?? '', self::REFERENCE_MAX_LENGTH ),
+			'outcome'     => $this->text( $entry['outcome'] ?? '', self::REFERENCE_MAX_LENGTH ),
+			'attempt'     => max( 0, (int) ( $entry['attempt'] ?? 0 ) ),
+			'status'      => max( 0, (int) ( $entry['status'] ?? 0 ) ),
+			'request_id'  => $this->text( $entry['request_id'] ?? '', self::REQUEST_ID_MAX_LENGTH ),
+			'reason'      => $this->text( $entry['reason'] ?? '', self::REASON_MAX_LENGTH ),
+			'result'      => $this->text( $entry['result'] ?? '', self::REASON_MAX_LENGTH ),
+			// The code-shaped class of a failed request (PERMISSION_DENIED, http_403);
+			// what the log ability answers with instead of Google's text (#509).
+			'error_class' => 1 === preg_match( '/^[A-Za-z0-9_]{1,40}$/D', (string) ( $entry['error_class'] ?? '' ) ) ? (string) $entry['error_class'] : '',
+			'errors'      => max( 0, (int) ( $entry['errors'] ?? 0 ) ),
+			'warnings'    => max( 0, (int) ( $entry['warnings'] ?? 0 ) ),
+		);
+	}
+
+	/**
+	 * One sanitized, capped text field.
+	 *
+	 * @param mixed $value    Raw value.
+	 * @param int   $max_size Longest kept length.
+	 * @return string
+	 */
+	private function text( $value, int $max_size ): string {
+		if ( ! is_scalar( $value ) ) {
+			return '';
+		}
+
+		$clean = sanitize_text_field( (string) $value );
+
+		if ( mb_strlen( $clean ) <= $max_size ) {
+			return $clean;
+		}
+
+		// The ellipsis is part of the budget, so a capped value never exceeds
+		// the cap by the character that says it was capped.
+		return mb_substr( $clean, 0, $max_size - 1 ) . '…';
+	}
+
+	/**
+	 * The current Unix time through the injectable clock.
+	 *
+	 * @return int
+	 */
+	private function now(): int {
+		return is_callable( $this->clock ) ? (int) call_user_func( $this->clock ) : time();
+	}
+
+	/**
+	 * Reads the option row, dropping anything that is not an entry array.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function read(): array {
+		$stored = get_option( self::OPTION_NAME, array() );
+
+		if ( ! is_array( $stored ) ) {
+			return array();
+		}
+
+		$entries = array();
+
+		foreach ( $stored as $entry ) {
+			if ( is_array( $entry ) ) {
+				$entries[] = $entry;
+			}
+		}
+
+		return $entries;
+	}
+
+	/**
+	 * Writes the option row, non-autoloaded (the autoload flag only applies
+	 * when the row is created, so the first write goes through add_option()).
+	 *
+	 * @param array<int, array<string, mixed>> $entries The ring.
+	 * @return void
+	 */
+	private function write( array $entries ): void {
+		$entries = array_values( $entries );
+
+		if ( false === get_option( self::OPTION_NAME, false ) ) {
+			add_option( self::OPTION_NAME, $entries, '', false );
+			return;
+		}
+
+		update_option( self::OPTION_NAME, $entries, false );
+	}
+}

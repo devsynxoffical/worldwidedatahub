@@ -1,0 +1,32 @@
+# macOS / OS metadata
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs and error logs
+error_log
+*/error_log
+*/**/error_log
+*.log
+
+# Backups and large archives (exceeding GitHub limit)
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.gz
+*.wpress
+*.sql
+*.bak
+**/ai1wm-backups/
+**/aiowps_backups/
+
+# WordPress cache & firewall logs
+**/wp-content/cache/**
+**/wp-content/wflogs/**
+**/wp-content/upgrade/**
+**/wp-content/upgrade-temp-backup/**

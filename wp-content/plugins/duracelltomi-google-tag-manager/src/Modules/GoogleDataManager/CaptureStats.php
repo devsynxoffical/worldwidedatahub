@@ -1,0 +1,158 @@
+<?php
+/**
+ * Capture-rate counters of the attribution capture.
+ *
+ * @package GTM4WP
+ * @author Thomas Geiger
+ * @copyright 2013- Geiger Tamás e.v. (Thomas Geiger s.e.)
+ * @license GNU General Public License, version 3
+ */
+
+namespace GTM4WP\Modules\GoogleDataManager;
+
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * Counts how many orders capture saw and on how many it resolved a client id.
+ * The feature's characteristic failure is silent (a mistyped measurement ID,
+ * a tag removed from the container: the lookups are simply never answered),
+ * so two counters let the settings screen and Site Health say "captured on 0
+ * of the last N orders". Counters and timestamps only, nothing per order or
+ * per visitor.
+ */
+final class CaptureStats {
+
+	/**
+	 * Option holding the counters. Its own row, not autoloaded: it is written
+	 * at order creation and read on the settings screen, never on a pageview.
+	 */
+	public const OPTION_NAME = 'gtm4wp_gdm_capture_stats';
+
+	/**
+	 * How many recent orders the rate is measured over. The counters halve
+	 * when they reach it, so the record keeps reflecting the recent past
+	 * instead of averaging over the store's whole history - a store that fixed
+	 * its container should see the number recover.
+	 */
+	public const WINDOW = 100;
+
+	/**
+	 * Clock, injectable for tests.
+	 *
+	 * @var callable|null
+	 */
+	private $clock;
+
+	/**
+	 * Builds the counter store.
+	 *
+	 * @param callable|null $clock Returns the current unix timestamp.
+	 */
+	public function __construct( ?callable $clock = null ) {
+		$this->clock = $clock;
+	}
+
+	/**
+	 * Current timestamp.
+	 *
+	 * @return int
+	 */
+	private function now(): int {
+		return null !== $this->clock ? (int) call_user_func( $this->clock ) : time();
+	}
+
+	/**
+	 * Records one order.
+	 *
+	 * @param bool $captured Whether attribution usable for a send was stored.
+	 * @return void
+	 */
+	public function record( bool $captured ): void {
+		$record = $this->get();
+		$now    = $this->now();
+
+		++$record['seen'];
+		$record['last_seen_at'] = $now;
+
+		if ( $captured ) {
+			++$record['captured'];
+			$record['last_captured_at'] = $now;
+		}
+
+		if ( $record['seen'] >= self::WINDOW ) {
+			$record['seen']     = (int) floor( $record['seen'] / 2 );
+			$record['captured'] = (int) floor( $record['captured'] / 2 );
+		}
+
+		$this->save( $record );
+	}
+
+	/**
+	 * Records that an order counted uncaptured at creation got its client id
+	 * later, from the receipt-page backfill (#482) or a resumed checkout: captured
+	 * goes up, seen does not, and captured never passes seen. Callers check the
+	 * order's CaptureHooks::META_COUNTED marker first (#537).
+	 *
+	 * @return void
+	 */
+	public function record_rescue(): void {
+		$record = $this->get();
+
+		if ( $record['captured'] >= $record['seen'] ) {
+			return;
+		}
+
+		++$record['captured'];
+		$record['last_captured_at'] = $this->now();
+
+		$this->save( $record );
+	}
+
+	/**
+	 * The stored counters, with every member present.
+	 *
+	 * @return array{seen: int, captured: int, last_seen_at: int, last_captured_at: int}
+	 */
+	public function get(): array {
+		$stored = get_option( self::OPTION_NAME, array() );
+
+		if ( ! is_array( $stored ) ) {
+			$stored = array();
+		}
+
+		return array(
+			'seen'             => isset( $stored['seen'] ) ? max( 0, (int) $stored['seen'] ) : 0,
+			'captured'         => isset( $stored['captured'] ) ? max( 0, (int) $stored['captured'] ) : 0,
+			'last_seen_at'     => isset( $stored['last_seen_at'] ) ? max( 0, (int) $stored['last_seen_at'] ) : 0,
+			'last_captured_at' => isset( $stored['last_captured_at'] ) ? max( 0, (int) $stored['last_captured_at'] ) : 0,
+		);
+	}
+
+	/**
+	 * Whether the record shows orders flowing with nothing being captured -
+	 * the state worth telling the site owner about.
+	 *
+	 * @return bool
+	 */
+	public function is_failing(): bool {
+		$record = $this->get();
+
+		return $record['seen'] > 0 && 0 === $record['captured'];
+	}
+
+	/**
+	 * Stores the counters, creating the row non-autoloaded on first write.
+	 *
+	 * @param array<string, int> $record The counters.
+	 * @return void
+	 */
+	private function save( array $record ): void {
+		if ( false === get_option( self::OPTION_NAME, false ) ) {
+			add_option( self::OPTION_NAME, $record, '', false );
+
+			return;
+		}
+
+		update_option( self::OPTION_NAME, $record, false );
+	}
+}

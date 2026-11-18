@@ -1,0 +1,120 @@
+@font-face {
+	font-weight: normal;
+	font-style: normal;
+	font-family: "woodmart-font";
+	src: url("//worldwidedatahub.com/wp-content/themes/woodmart/fonts/woodmart-font-1-400.woff2?v=8.0.1") format("woff2");
+}
+
+@font-face {
+	font-family: "star";
+	font-weight: 400;
+	font-style: normal;
+	src: url("//worldwidedatahub.com/wp-content/plugins/woocommerce/assets/fonts/star.eot?#iefix") format("embedded-opentype"), url("//worldwidedatahub.com/wp-content/plugins/woocommerce/assets/fonts/star.woff") format("woff"), url("//worldwidedatahub.com/wp-content/plugins/woocommerce/assets/fonts/star.ttf") format("truetype"), url("//worldwidedatahub.com/wp-content/plugins/woocommerce/assets/fonts/star.svg#star") format("svg");
+}
+
+@font-face {
+	font-family: "WooCommerce";
+	font-weight: 400;
+	font-style: normal;
+	src: url("//worldwidedatahub.com/wp-content/plugins/woocommerce/assets/fonts/WooCommerce.eot?#iefix") format("embedded-opentype"), url("//worldwidedatahub.com/wp-content/plugins/woocommerce/assets/fonts/WooCommerce.woff") format("woff"), url("//worldwidedatahub.com/wp-content/plugins/woocommerce/assets/fonts/WooCommerce.ttf") format("truetype"), url("//worldwidedatahub.com/wp-content/plugins/woocommerce/assets/fonts/WooCommerce.svg#WooCommerce") format("svg");
+}
+
+:root {
+	--wd-text-font: "Open Sans", Arial, Helvetica, sans-serif;
+	--wd-text-font-weight: 400;
+	--wd-text-color: #767676;
+	--wd-text-font-size: 14px;
+	--wd-title-font: "Nunito", Arial, Helvetica, sans-serif;
+	--wd-title-font-weight: 600;
+	--wd-title-color: #242424;
+	--wd-entities-title-font: "Nunito", Arial, Helvetica, sans-serif;
+	--wd-entities-title-font-weight: 600;
+	--wd-entities-title-color: #333333;
+	--wd-entities-title-color-hover: rgb(51 51 51 / 65%);
+	--wd-alternative-font: "Lato", Arial, Helvetica, sans-serif;
+	--wd-widget-title-font: "Poppins", Arial, Helvetica, sans-serif;
+	--wd-widget-title-font-weight: 600;
+	--wd-widget-title-transform: uppercase;
+	--wd-widget-title-color: #333;
+	--wd-widget-title-font-size: 16px;
+	--wd-header-el-font: "Lato", Arial, Helvetica, sans-serif;
+	--wd-header-el-font-weight: 700;
+	--wd-header-el-transform: uppercase;
+	--wd-header-el-font-size: 13px;
+	--wd-primary-color: rgb(253,113,68);
+	--wd-alternative-color: #fbbc34;
+	--wd-link-color: #333333;
+	--wd-link-color-hover: #242424;
+	--btn-default-bgcolor: rgb(253,113,68);
+	--btn-default-bgcolor-hover: rgb(253,113,68);
+	--btn-accented-bgcolor: rgb(253,113,68);
+	--btn-accented-bgcolor-hover: rgb(253,113,68);
+	--wd-form-brd-width: 2px;
+	--notices-success-bg: #459647;
+	--notices-success-color: #fff;
+	--notices-warning-bg: #E0B252;
+	--notices-warning-color: #fff;
+}
+.woodmart-woocommerce-layered-nav .wd-scroll-content {
+	max-height: 223px;
+}
+.wd-popup.wd-age-verify {
+	--wd-popup-width: 500px;
+}
+.wd-popup.wd-promo-popup {
+	background-color: rgb(72,118,202);
+	background-image: url(https://worldwidedatahub.com/wp-content/uploads/2021/09/digitals-promo-popup.jpg);
+	background-repeat: no-repeat;
+	background-size: cover;
+	background-position: center center;
+	--wd-popup-width: 800px;
+	--wd-popup-padding: 15px;
+}
+.wd-page-title {
+	background-color: rgb(72,118,202);
+	background-image: url(https://worldwidedatahub.com/wp-content/uploads/2021/09/digitals-promo-popup.jpg);
+	background-size: cover;
+	background-position: center center;
+}
+.wd-footer {
+	background-color: rgb(23,23,47);
+	background-image: none;
+}
+.single-product .wd-page-content {
+	background-color: rgb(249,249,249);
+	background-image: none;
+}
+.wd-popup.popup-quick-view {
+	--wd-popup-width: 920px;
+}
+:root{
+--wd-container-w: 1222px;
+--wd-form-brd-radius: 0px;
+--btn-default-color: #fff;
+--btn-default-color-hover: #fff;
+--btn-accented-color: #fff;
+--btn-accented-color-hover: #fff;
+--btn-default-brd-radius: 35px;
+--btn-default-box-shadow: none;
+--btn-default-box-shadow-hover: none;
+--btn-accented-brd-radius: 35px;
+--btn-accented-box-shadow: none;
+--btn-accented-box-shadow-hover: none;
+--wd-brd-radius: 0px;
+}
+
+@media (min-width: 1239px) {
+.platform-Windows .wd-section-stretch > .elementor-container {
+margin-left: auto;
+margin-right: auto;
+}
+}
+
+@media (min-width: 1222px) {
+html:not(.platform-Windows) .wd-section-stretch > .elementor-container {
+margin-left: auto;
+margin-right: auto;
+}
+}
+
+
