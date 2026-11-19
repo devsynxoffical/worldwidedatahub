@@ -260,6 +260,17 @@ function my_item_setup( $item ) {
 include( get_template_directory().'/inc/support.php');
 //include( get_template_directory().'/inc/form_submission.php');
 
+/* Lead capture + data landing pages */
+require_once get_template_directory() . '/inc/wwdh-leads.php';
+add_action( 'wp_enqueue_scripts', function () {
+	if ( is_page_template( 'template-data-landing.php' ) ) {
+		$dir = get_template_directory();
+		$uri = get_template_directory_uri();
+		wp_enqueue_style( 'wwdh-landing', $uri . '/css/landing.css', array(), filemtime( $dir . '/css/landing.css' ) );
+		wp_enqueue_script( 'wwdh-landing', $uri . '/js/landing.js', array(), filemtime( $dir . '/js/landing.js' ), true );
+	}
+}, 20 );
+
 /*--------------Request Sample form submission--------------*/
 
 function worldwidedatabase_form_submission() {
