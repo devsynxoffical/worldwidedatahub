@@ -185,3 +185,13 @@ add_action( 'manage_wwdh_lead_posts_custom_column', function ( $col, $id ) {
 		echo esc_html( $v );
 	}
 }, 10, 2 );
+
+/* Contact page (ID 173) had no working form: append the lead form. */
+add_filter( 'the_content', function ( $content ) {
+	if ( is_page( 173 ) && in_the_loop() && is_main_query() ) {
+		$content .= '<div class="lp-page lp-contact-form" style="max-width:640px;margin:40px auto 60px;padding:0 16px">'
+			. do_shortcode( '[wwdh_lead_form title="Request sample data or a quote" button="Send my request"]' )
+			. '</div>';
+	}
+	return $content;
+}, 99 );
