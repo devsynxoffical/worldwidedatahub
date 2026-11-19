@@ -95,3 +95,14 @@ add_action( 'template_redirect', function () {
 		exit;
 	}
 }, 1 );
+
+/* IndexNow key file (Bing etc.) served at /{key}.txt without a root file. */
+add_action( 'init', function () {
+	$key  = '9c340550dc224f03b33dad0bd9da36dd';
+	$path = isset( $_SERVER['REQUEST_URI'] ) ? wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH ) : ''; // phpcs:ignore
+	if ( '/' . $key . '.txt' === $path ) {
+		header( 'Content-Type: text/plain; charset=utf-8' );
+		echo $key; // phpcs:ignore
+		exit;
+	}
+}, 0 );
