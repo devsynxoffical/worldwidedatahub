@@ -79,6 +79,8 @@ function wwdh_redirect_map() {
 		'/canada-business-email-database/'   => '/canada-email-list/',
 		'/canada-business-email-list/'       => '/canada-email-list/',
 		'/singapore-companies-database/'     => '/singapore-email-list/',
+		// Industry page consolidation.
+		'/real-estate-email-database-global-developers/' => '/real-estate-email-list/',
 		// Duplicate "(Copy)" products -> original products.
 		'/product/sao-tome-and-principe-company-database-mobile-numbers-email-list-copy/' => '/product/sao-tome-and-principe-company-database/',
 		'/product/switzerland-company-database-mobile-numbers-email-list-copy/'   => '/product/switzerland-companies-database/',
