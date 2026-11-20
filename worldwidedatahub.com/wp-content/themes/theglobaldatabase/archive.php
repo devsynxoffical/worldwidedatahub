@@ -13,10 +13,10 @@ get_header();
   <div class="bwb-overlay"></div>
   <div class="container">
     <div class="banner-title">
-      <h2> Blog </h2>
+      <h1> <?php echo esc_html( wp_strip_all_tags( get_the_archive_title() ) ); ?> </h1>
       <ul>
-        <li> <a href="<?php echo site_url(); ?>"> Home </a> </li>
-        <li> <a href=""> Blog </a>  </li>
+        <li> <a href="<?php echo esc_url( site_url() ); ?>"> Home </a> </li>
+        <li> <a href="<?php echo esc_url( get_permalink( get_option( 'page_for_posts' ) ) ); ?>"> Blog </a>  </li>
       </ul>
     </div>    
   </div>

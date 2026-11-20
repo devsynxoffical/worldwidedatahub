@@ -39,11 +39,11 @@ get_header(); ?>
  		?>
  			<div class="col-sm-6 col-xs-12">
 				<div class="about-sipport relative">
-					<a href="<?php the_permalink(); ?>"><img src="<?php echo $featured_img_url; ?>" class="img-responsive aboutimg"></a>	
+					<a href="<?php the_permalink(); ?>"><img src="<?php echo esc_url( $featured_img_url ); ?>" alt="<?php echo esc_attr( get_the_title() ); ?>" loading="lazy" class="img-responsive aboutimg"></a>	
 					<div class="about-support-info">
-						<a href="<?php the_permalink(); ?>"><h3><?php the_title(); ?></h3></a>
+						<a href="<?php the_permalink(); ?>"><h2 class="h3"><?php the_title(); ?></h2></a>
 						<p class="blog-post-meta">by <span class="author author"><a href="#" title="Posts by" rel="author"><?php echo get_author_name(); ?></a></span> | <span class="published"><?php echo get_the_date(); ?></span> | <a href="<?php echo get_category_link(38); ?>" rel="category tag"><?php echo get_cat_name(38); ?></a> | <?php echo get_comments_number() ?> Comments</p>
-						<p class="p16">Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. </p>
+						<p class="p16"><?php echo esc_html( wp_trim_words( wp_strip_all_tags( get_the_excerpt() ), 30 ) ); ?></p>
 					</div>
 				</div>
 			</div>

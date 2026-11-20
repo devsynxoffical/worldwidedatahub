@@ -224,7 +224,7 @@ get_header();
           </div>            
 
           <div class="col-md-9">
-          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => -1,'product_cat' => 'north-america-business-data', 'orderby' =>'date','order' => 'ASC' ); ?>
+          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => 12,'product_cat' => 'north-america-business-data', 'orderby' =>'date','order' => 'ASC' ); ?>
             <div class="owl-carousel owl-theme product-carousel">
                 <?php
                 $loop = new WP_Query( $args );
@@ -252,7 +252,7 @@ get_header();
                     <div class="updated-2020"> <span> 2025 Updated</span> </div>
                   <?php endif; ?>
                     <div class="product-item-image">
-                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_url( get_post_thumbnail_id()); ?>" alt="<?php echo the_title(); ?>"> </a>
+                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_image_url( get_post_thumbnail_id(), 'woocommerce_thumbnail' ); ?>" alt="<?php echo the_title(); ?>"> </a>
                     </div>
                     <div class="product-item-content">
                       <p><?php echo get_field('product_record',$product->id) ?> </p>
@@ -285,7 +285,7 @@ get_header();
             </div>
           </div>            
           <div class="col-md-9">
-          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => -1,'product_cat' => 'european-business-data', 'orderby' =>'date','order' => 'ASC' ); ?>
+          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => 12,'product_cat' => 'european-business-data', 'orderby' =>'date','order' => 'ASC' ); ?>
             <div class="owl-carousel owl-theme product-carousel">
                 <?php
                 $loop = new WP_Query( $args );
@@ -314,7 +314,7 @@ get_header();
                     <div class="updated-2020"> <span> 2025 Updated</span> </div>
                     <?php endif ?>
                     <div class="product-item-image">
-                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_url( get_post_thumbnail_id()); ?>" alt="<?php the_title(); ?>"> </a>
+                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_image_url( get_post_thumbnail_id(), 'woocommerce_thumbnail' ); ?>" alt="<?php the_title(); ?>"> </a>
                     </div>
                     <div class="product-item-content">
                       <p><?php echo get_field('product_record',$product->id) ?> </p>
@@ -349,7 +349,7 @@ get_header();
             </div>
           </div>            
           <div class="col-md-9">
-          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => -1,'product_cat' => 'asia-business-data', 'orderby' =>'date','order' => 'ASC' ); ?>
+          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => 12,'product_cat' => 'asia-business-data', 'orderby' =>'date','order' => 'ASC' ); ?>
             <div class="owl-carousel owl-theme product-carousel">
                 <?php
                 $loop = new WP_Query( $args );
@@ -378,7 +378,7 @@ get_header();
                     <div class="updated-2020"> <span> 2025 Updated</span> </div>
                     <?php endif ?>
                     <div class="product-item-image">
-                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_url( get_post_thumbnail_id()); ?>" alt="<?php the_title(); ?>"> </a>
+                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_image_url( get_post_thumbnail_id(), 'woocommerce_thumbnail' ); ?>" alt="<?php the_title(); ?>"> </a>
                     </div>
                     <div class="product-item-content">
                       <p><?php echo get_field('product_record',$product->id) ?> </p>
@@ -412,7 +412,7 @@ get_header();
             </div>
           </div>            
           <div class="col-md-9">
-          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => -1,'product_cat' => 'south-america-business-data', 'orderby' =>'date','order' => 'ASC' ); ?>
+          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => 12,'product_cat' => 'south-america-business-data', 'orderby' =>'date','order' => 'ASC' ); ?>
             <div class="owl-carousel owl-theme product-carousel">
                 <?php
                 $loop = new WP_Query( $args );
@@ -441,7 +441,7 @@ get_header();
                     <div class="updated-2020"> <span> 2025 Updated</span> </div>
                     <?php endif ?>
                     <div class="product-item-image">
-                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_url( get_post_thumbnail_id()); ?>" alt="<?php the_title(); ?>"> </a>
+                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_image_url( get_post_thumbnail_id(), 'woocommerce_thumbnail' ); ?>" alt="<?php the_title(); ?>"> </a>
                     </div>
                     <div class="product-item-content">
                       <p><?php echo get_field('product_record',$product->id) ?> </p>
@@ -476,7 +476,7 @@ get_header();
             </div>
           </div>            
           <div class="col-md-9">
-          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => -1,'product_cat' => 'oceania-consumer-data', 'orderby' =>'date','order' => 'ASC' ); ?>
+          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => 12,'product_cat' => 'oceania-consumer-data', 'orderby' =>'date','order' => 'ASC' ); ?>
             <div class="owl-carousel owl-theme product-carousel">
                 <?php
                 $loop = new WP_Query( $args );
@@ -505,7 +505,7 @@ get_header();
                     <div class="updated-2020"> <span> 2025 Updated</span> </div>
                     <?php endif ?>
                     <div class="product-item-image">
-                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_url( get_post_thumbnail_id()); ?>" alt="<?php the_title(); ?>"> </a>
+                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_image_url( get_post_thumbnail_id(), 'woocommerce_thumbnail' ); ?>" alt="<?php the_title(); ?>"> </a>
                     </div>
                     <div class="product-item-content">
                       <p><?php echo get_field('product_record',$product->id) ?> </p>
@@ -540,7 +540,7 @@ get_header();
             </div>
           </div>            
           <div class="col-md-9">
-          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => -1,'product_cat' => 'africa-consumer-data', 'orderby' =>'date','order' => 'ASC' ); ?>
+          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => 12,'product_cat' => 'africa-consumer-data', 'orderby' =>'date','order' => 'ASC' ); ?>
             <div class="owl-carousel owl-theme product-carousel">
                 <?php
                 $loop = new WP_Query( $args );
@@ -569,7 +569,7 @@ get_header();
                     <div class="updated-2020"> <span> 2025 Updated</span> </div>
                     <?php endif ?>
                     <div class="product-item-image">
-                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_url( get_post_thumbnail_id()); ?>" alt="<?php the_title(); ?>"> </a>
+                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_image_url( get_post_thumbnail_id(), 'woocommerce_thumbnail' ); ?>" alt="<?php the_title(); ?>"> </a>
                     </div>
                     <div class="product-item-content">
                       <p><?php echo get_field('product_record',$product->id) ?> </p>
@@ -602,7 +602,7 @@ get_header();
           </div>            
 
           <div class="col-md-9">
-          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => -1,'product_cat' => 'asia-business-data', 'orderby' =>'date','order' => 'ASC' ); ?>
+          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => 12,'product_cat' => 'asia-business-data', 'orderby' =>'date','order' => 'ASC' ); ?>
             <div class="owl-carousel owl-theme product-carousel">
                 <?php
                 $loop = new WP_Query( $args );
@@ -630,7 +630,7 @@ get_header();
                     <div class="updated-2020"> <span> 2024 Updated</span> </div>
                   <?php endif; ?>
                     <div class="product-item-image">
-                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_url( get_post_thumbnail_id()); ?>" alt="<?php echo the_title(); ?>"> </a>
+                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_image_url( get_post_thumbnail_id(), 'woocommerce_thumbnail' ); ?>" alt="<?php echo the_title(); ?>"> </a>
                     </div>
                     <div class="product-item-content">
                       <p><?php echo get_field('product_record',$product->id) ?> </p>
@@ -689,7 +689,7 @@ get_header();
             </div>
           </div>            
           <div class="col-md-9">
-          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => -1,'product_cat' => 'north-america-consumer-data', 'orderby' =>'date','order' => 'ASC' ); ?>
+          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => 12,'product_cat' => 'north-america-consumer-data', 'orderby' =>'date','order' => 'ASC' ); ?>
             <div class="owl-carousel owl-theme product-carousel">
                 <?php
                 $loop = new WP_Query( $args );
@@ -718,7 +718,7 @@ get_header();
                     <div class="updated-2020"> <span> 2024 Updated</span> </div>
                   <?php endif;  ?>
                     <div class="product-item-image">
-                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_url( get_post_thumbnail_id()); ?>" alt="<?php the_title(); ?>"> </a>
+                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_image_url( get_post_thumbnail_id(), 'woocommerce_thumbnail' ); ?>" alt="<?php the_title(); ?>"> </a>
                     </div>
                     <div class="product-item-content">
                       <p><?php echo get_field('product_record',$product->id) ?> </p>
@@ -750,7 +750,7 @@ get_header();
             </div>            
           </div>            
           <div class="col-md-9">
-            <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => -1,'product_cat' => 'european-consumer-data', 'orderby' =>'date','order' => 'ASC' ); ?>
+            <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => 12,'product_cat' => 'european-consumer-data', 'orderby' =>'date','order' => 'ASC' ); ?>
             <div class="owl-carousel owl-theme product-carousel">
                 <?php
                 $loop = new WP_Query( $args );
@@ -779,7 +779,7 @@ get_header();
                     <div class="updated-2020"> <span> 2024 Updated</span> </div>
                   <?php endif;  ?>
                     <div class="product-item-image">
-                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_url( get_post_thumbnail_id()); ?>" alt="<?php the_title(); ?>"> </a>
+                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_image_url( get_post_thumbnail_id(), 'woocommerce_thumbnail' ); ?>" alt="<?php the_title(); ?>"> </a>
                     </div>
                     <div class="product-item-content">
                       <p><?php echo get_field('product_record',$product->id) ?> </p>
@@ -829,7 +829,7 @@ get_header();
               <h2> Special Databases by Industry and Country </h2>
             </div>
           </div>  
-          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => -1,'product_cat' => 'special-database', 'orderby' =>'date','order' => 'ASC' ); ?>                 
+          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => 12,'product_cat' => 'special-database', 'orderby' =>'date','order' => 'ASC' ); ?>                 
           <?php
           $i=1;
           $loop = new WP_Query( $args );
@@ -859,7 +859,7 @@ get_header();
                     <div class="updated-2020"> <span> 2024 Updated</span> </div>
                   <?php endif; ?>
                     <div class="product-item-image">
-                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_url( get_post_thumbnail_id()); ?>" alt="<?php the_title(); ?>"> </a>
+                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_image_url( get_post_thumbnail_id(), 'woocommerce_thumbnail' ); ?>" alt="<?php the_title(); ?>"> </a>
                     </div>
                     <div class="product-item-content">
                       <p><?php echo get_field('product_record',$product->id) ?> </p>
@@ -892,7 +892,7 @@ get_header();
               <h2> 2025 Latest Whois Country Wise Database </h2>
             </div>
           </div>           
-          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => -1,'product_cat' => 'whois-database', 'orderby' =>'date','order' => 'ASC' ); ?>                 
+          <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => 12,'product_cat' => 'whois-database', 'orderby' =>'date','order' => 'ASC' ); ?>                 
           <?php
           $j=1;
           $loop = new WP_Query( $args );
@@ -922,7 +922,7 @@ get_header();
                     <div class="updated-2020"> <span> 2023 Updated</span> </div>
                   <?php endif; ?>
                     <div class="product-item-image">
-                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_url( get_post_thumbnail_id()); ?>" alt="<?php the_title(); ?>"> </a>
+                      <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_image_url( get_post_thumbnail_id(), 'woocommerce_thumbnail' ); ?>" alt="<?php the_title(); ?>"> </a>
                     </div>
                     <div class="product-item-content">
                       <p><?php echo get_field('product_record',$product->id) ?> </p>

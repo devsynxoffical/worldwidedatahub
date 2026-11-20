@@ -424,7 +424,7 @@ footer {
     text-decoration:none;
 }
 
-.our-links h3, .foot-contact h3 {
+.our-links h3, .foot-contact h3, .our-links .footer-title, .foot-contact .footer-title {
     color: #fff;
     font-size: 24px;
     margin-bottom: 15px;
@@ -1583,3 +1583,5 @@ element.style {
 img {
     max-width: 140% !important;
 }
+/* footer column titles (were h3; not document headings) */
+.footer-title{font-family:"Staatliches",sans-serif;font-weight:500;line-height:1.2;margin:0 0 .5rem;padding:0;}

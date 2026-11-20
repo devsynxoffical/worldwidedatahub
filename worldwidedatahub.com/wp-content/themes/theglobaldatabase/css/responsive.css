@@ -134,7 +134,7 @@ a.lost-btn { float:none ; }
 p { font-size: 13px; line-height: 22px; }
 a.orange-btn { padding:7px 25px 8px; font-size: 13px; }
 .our-links ul li a, .foot-contact ul.contact-list li { font-size:14px; }
-.our-links h3, .foot-contact h3 { font-size: 20px; }
+.our-links h3, .foot-contact h3, .our-links .footer-title, .foot-contact .footer-title { font-size: 20px; }
 .top-footer { padding-top:30px; }
 h3 { font-size: 1.2rem; }
 h2, .h2 { font-size: 1.6rem; }

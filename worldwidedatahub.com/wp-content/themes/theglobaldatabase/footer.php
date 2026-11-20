@@ -18,7 +18,7 @@
         <div class="row">
           <div class="col-md-9">
             <div class="our-links">
-              <h3> Our Links </h3>
+              <p class="footer-title"> Our Links </p>
               <?php
               wp_nav_menu(array(
               'menu'=>'Ourlinks',
@@ -30,20 +30,20 @@
               ?>
             </div>
             <div class="our-links">
-              <h3> Business List </h3>
+              <p class="footer-title"> Business List </p>
               <?php $args = array('menu'=>'businesslist','container_id'=>'database-business-list','container_class'=>'business-list-wrap','menu_class'=>'business-list','theme_location'=>'menu-3'); ?>
               <?php wp_nav_menu($args); ?>
 
             </div>
             <div class="our-links">
-              <h3> Consumer List </h3>
+              <p class="footer-title"> Consumer List </p>
               <?php $args = array('menu'=>'speciallist','container_id'=>'database-special-list','container_class'=>'special-list-wrap','menu_class'=>'special-list','theme_location'=>'menu-4'); ?>
               <?php wp_nav_menu($args); ?>
             </div>        
             <div class="clearfix"></div>                   
           </div>
           <div class="col-md-3 footer-right-column foot-contact">
-            <h3> Contact </h3>
+            <p class="footer-title"> Contact </p>
             <?php the_field('footer_contact', 'option'); ?> 
             <ul class="social-media mt-20">
               <?php if( have_rows('footer_social', 'option') ):?>

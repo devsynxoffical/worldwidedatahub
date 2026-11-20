@@ -29,9 +29,13 @@
 		<?php endif; ?>
 	</header><!-- .entry-header -->
 
-	 <img src="<?php the_post_thumbnail_url();  ?>" alt="" width="100%"> 
+	 <?php if ( has_post_thumbnail() ) : ?><img src="<?php the_post_thumbnail_url( is_singular() ? 'full' : 'medium_large' ); ?>" alt="<?php echo esc_attr( get_the_title() ); ?>" width="100%" <?php echo is_singular() ? '' : 'loading="lazy"'; ?>><?php endif; ?> 
 
 	<div class="entry-content">
+		<?php if ( ! is_singular() ) : ?>
+		<p><?php echo esc_html( wp_trim_words( wp_strip_all_tags( get_the_excerpt() ), 40 ) ); ?></p>
+		<p><a class="read-more" href="<?php the_permalink(); ?>">Read more<span class="screen-reader-text"> about <?php the_title(); ?></span> &rarr;</a></p>
+		<?php else : ?>
 		<?php
 		the_content(
 			sprintf(
@@ -55,6 +59,7 @@
 			)
 		);
 		?>
+		<?php endif; ?>
 	</div><!-- .entry-content -->
 
 	<footer class="entry-footer">
