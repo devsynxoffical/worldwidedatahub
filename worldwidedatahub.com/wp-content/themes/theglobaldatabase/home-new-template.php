@@ -209,7 +209,7 @@ get_header();
         <div class="row">
           <div class="col-md-12">
             <div class="mb-30 text-center">
-              <h1> 2025 Country Wise Business Email & Mobile Number Database </h1>
+              <h1> B2B Email Lists and Business Databases by Country </h1>
 				<h4> Now pay online by card and get immediate download link </h4>	
               <div class="clearfix"></div>
             </div>
@@ -677,7 +677,7 @@ get_header();
         <div class="row">
           <div class="col-md-12">
           <div class="mb-30 text-center">
-           <h2> 2025 Country wise Consumer Email Database </h2>
+           <h2> Country-Wise Consumer Email Database </h2>
           </div>
           </div>
           <div class="col-md-3 pia-wrapper">
@@ -826,7 +826,7 @@ get_header();
         <div class="row"> 
           <div class="col-md-12">
             <div class="mb-30 text-center">
-              <h2> 2025 Latest Specials Country Wise Database </h2>
+              <h2> Special Databases by Industry and Country </h2>
             </div>
           </div>  
           <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => -1,'product_cat' => 'special-database', 'orderby' =>'date','order' => 'ASC' ); ?>                 
