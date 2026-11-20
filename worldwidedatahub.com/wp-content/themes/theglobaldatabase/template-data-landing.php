@@ -15,15 +15,9 @@ get_header();
 
 while ( have_posts() ) :
 	the_post();
-	// Section HTML is hand-built; stop wpautop from inserting <p>/<br> into it.
-	$wwdh_autop = has_filter( 'the_content', 'wpautop' );
-	if ( $wwdh_autop ) {
-		remove_filter( 'the_content', 'wpautop' );
-	}
-	$wwdh_content = apply_filters( 'the_content', get_the_content() );
-	if ( $wwdh_autop ) {
-		add_filter( 'the_content', 'wpautop', $wwdh_autop );
-	}
+	// Section HTML is hand-built. Render it directly: no wpautop, and no page
+	// builder (SiteOrigin) override for older pages switched to this template.
+	$wwdh_content = do_shortcode( shortcode_unautop( get_the_content() ) );
 	?>
 	<main id="primary" class="site-main lp-page">
 		<?php echo $wwdh_content; // phpcs:ignore WordPress.Security.EscapeOutput -- post content filtered by the_content. ?>
