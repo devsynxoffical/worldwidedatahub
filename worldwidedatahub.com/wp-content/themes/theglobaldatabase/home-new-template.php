@@ -180,28 +180,14 @@ get_header();
           <?php $cnt =1; ?>
           <?php while ( have_rows('client_stripe',186) ) : the_row(); ?>
             <div class="features-item <?php if($cnt==3): echo "last"; endif; ?>">
-              <img src="<?php the_sub_field('stripe_image',186); ?>" alt="">
+              <img src="<?php the_sub_field('stripe_image',186); ?>" alt="<?php echo esc_attr( wp_strip_all_tags( get_sub_field('stripe_heading',186) ) ); ?>">
               <h4> <?php the_sub_field('stripe_heading',186); ?> </h4>
               <p> <?php the_sub_field('stripe_content',186); ?> </p>
             </div>
           <?php $cnt++; endwhile;
           endif;
           ?>
-          <!-- <div class="features-item">
-            <img src="<?php //echo home_url('/wp-content/themes/theglobaldatabase'); ?>/img/features/1.png" alt="">
-            <h4> INSTANT DOWNLOAD </h4>
-            <p> Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do. </p>
-          </div>
-          <div class="features-item">
-            <img src="<?php //echo home_url('/wp-content/themes/theglobaldatabase'); ?>/img/features/2.png" alt="">
-            <h4> 24/7 Support </h4>
-            <p> Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do. </p>
-          </div>
-          <div class="features-item last">
-            <img src="<?php //echo home_url('/wp-content/themes/theglobaldatabase'); ?>/img/features/3.png" alt="">
-            <h4> Safe Payment </h4>
-            <p> Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do. </p>
-          </div> -->                    
+                              
         </div>
     </div>
     <div class="buisiness-databases-list">

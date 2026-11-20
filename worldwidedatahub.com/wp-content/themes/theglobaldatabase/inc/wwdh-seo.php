@@ -116,3 +116,6 @@ add_action( 'init', function () {
 		exit;
 	}
 }, 0 );
+
+/* Archive headings without the 'Category:' / 'Tag:' / 'Author:' prefix. */
+add_filter( 'get_the_archive_title_prefix', '__return_empty_string' );
