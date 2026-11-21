@@ -56,6 +56,7 @@
           </ul>
           <?php endif; ?>
             </ul>
+            <div class="wwdh-gps-wrap"><?php if ( function_exists( 'wwdh_preferred_source_badge' ) ) { echo wwdh_preferred_source_badge(); } ?></div>
           </div>
           <div class="clearfix"></div>
         </div>
