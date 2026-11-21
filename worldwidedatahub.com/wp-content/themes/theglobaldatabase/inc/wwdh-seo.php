@@ -131,7 +131,7 @@ function wwdh_preferred_source_badge( $extra_class = '' ) {
 }
 
 add_action( 'wp_head', function () {
-	echo '<style>.wwdh-gps{display:inline-flex;align-items:center;gap:10px;background:#1a73e8;color:#fff!important;font:600 14px/1.3 Muli,Arial,sans-serif;padding:9px 16px 9px 9px;border-radius:6px;text-decoration:none!important;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:background .15s}.wwdh-gps:hover,.wwdh-gps:focus{background:#1765cc;color:#fff!important}.wwdh-gps-icon{background:#fff;border-radius:4px;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 26px}.wwdh-gps-wrap{margin-top:18px}.wwdh-gps-post{margin:32px 0 8px;padding:18px;border:1px solid #dadce0;border-radius:8px;background:#f8f9fa}.wwdh-gps-post p{margin:0 0 12px;color:#3c4043}</style>' . "\n";
+	echo '<style>.wwdh-gps{display:inline-flex;max-width:100%;box-sizing:border-box;align-items:center;gap:10px;background:#1a73e8;color:#fff!important;font:600 14px/1.3 Muli,Arial,sans-serif;padding:9px 16px 9px 9px;border-radius:6px;text-decoration:none!important;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:background .15s}.wwdh-gps:hover,.wwdh-gps:focus{background:#1765cc;color:#fff!important}.wwdh-gps-icon{background:#fff;border-radius:4px;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 26px}.wwdh-gps-wrap{margin-top:18px}.wwdh-gps-post{margin:32px 0 8px;padding:18px;border:1px solid #dadce0;border-radius:8px;background:#f8f9fa}.wwdh-gps-post p{margin:0 0 12px;color:#3c4043}</style>' . "\n";
 } );
 
 /* End of every blog post. */
