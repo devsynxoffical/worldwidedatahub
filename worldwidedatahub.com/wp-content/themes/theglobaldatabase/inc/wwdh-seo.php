@@ -9,6 +9,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/* Year shown on all 'Updated' badges (homepage cards, shop cards, product pages). */
+if ( ! defined( 'WWDH_DATA_YEAR' ) ) {
+	define( 'WWDH_DATA_YEAR', '2026' );
+}
+
 /* Pages that must not be indexed (payment helpers, thank-you pages). */
 function wwdh_noindex_page_ids() {
 	return array( 2692, 2693, 2694, 1807, 3149 );

@@ -252,11 +252,10 @@ get_header();
 
                         if ( $product->is_on_sale() ) :
                           ?>
-                        <span class="database-sale"><?php echo $profit_per."% OFF"; ?></span>
                         <?php
                          endif; 
                        ?>
-                       <span class="database-updated"><?php if(get_field('updated_data_year')): echo get_field('updated_data_year')." Updated"; endif; ?></span>
+                       <span class="database-updated"><?php echo WWDH_DATA_YEAR . " Updated"; ?></span>
                       <img src="<?php $img_url= wp_get_attachment_url( get_post_thumbnail_id()); echo $img_url;?>" alt="" class="img-responsive">
                       <div class="product-actions-overlay">
                       <a href="<?php echo site_url().'/?add-to-cart='.get_the_ID(); ?>" class="cart-btn"> Add To Cart </a>
@@ -377,11 +376,10 @@ get_header();
 
                         if ( $product->is_on_sale() ) :
                           ?>
-                        <span class="database-sale"><?php echo $profit_per."% OFF"; ?></span>
                         <?php
                          endif; 
                        ?>
-                       <span class="database-updated"><?php if(get_field('updated_data_year')): echo get_field('updated_data_year')." Updated"; endif; ?></span>
+                       <span class="database-updated"><?php echo WWDH_DATA_YEAR . " Updated"; ?></span>
                       <img src="<?php $img_url= wp_get_attachment_url( get_post_thumbnail_id()); echo $img_url;?>" alt="" class="img-responsive">
                       <div class="product-actions-overlay">
                       <a href="<?php echo site_url().'/?add-to-cart='.get_the_ID(); ?>" class="cart-btn"> Add To Cart </a>
@@ -500,11 +498,10 @@ get_header();
 
                         if ( $product->is_on_sale() ) :
                           ?>
-                        <span class="database-sale"><?php echo $profit_per."% OFF"; ?></span>
                         <?php
                          endif; 
                        ?>
-                       <span class="database-updated"><?php if(get_field('updated_data_year')): echo get_field('updated_data_year')." Updated"; endif; ?></span>
+                       <span class="database-updated"><?php echo WWDH_DATA_YEAR . " Updated"; ?></span>
                       <img src="<?php $img_url= wp_get_attachment_url( get_post_thumbnail_id()); echo $img_url;?>" alt="" class="img-responsive">
                       <div class="product-actions-overlay">
                       <a href="<?php echo site_url().'/?add-to-cart='.get_the_ID(); ?>" class="cart-btn"> Add To Cart </a>
@@ -589,11 +586,10 @@ get_header();
 
                         if ( $product->is_on_sale() ) :
                           ?>
-                        <span class="database-sale"><?php echo $profit_per."% OFF"; ?></span>
                         <?php
                          endif; 
                        ?>
-                       <span class="database-updated"><?php if(get_field('updated_data_year')): echo get_field('updated_data_year')." Updated"; endif; ?></span>
+                       <span class="database-updated"><?php echo WWDH_DATA_YEAR . " Updated"; ?></span>
 			         <?php if (has_post_thumbnail( $loop->post->ID )) 
 			         echo get_the_post_thumbnail($loop->post->ID, 'shop_catalog'); 
 			         else echo '<img src="'.woocommerce_placeholder_img_src().'" alt="product placeholder Image" />'; ?>

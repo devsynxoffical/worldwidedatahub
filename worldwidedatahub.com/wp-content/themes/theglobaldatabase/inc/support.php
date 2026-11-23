@@ -51,13 +51,12 @@ function getfilterbusinessbycategory(){
                         $profit_per = number_format(($profit_price/$regularPrice)*100,2);
 
                         if ( $product->is_on_sale() ) :
-                        $message .= '<span class="database-sale">'.$profit_per.'% OFF</span>
-                        ';
+                        $message .= '';
                         endif;  
                      $message .= '<span class="database-updated">';
 
                      if(get_field('updated_data_year')):
-                        $message .= get_field('updated_data_year').' Updated</span>';
+                        $message .= WWDH_DATA_YEAR.' Updated</span>';
                      endif; 
                      $message .= '
                      <img src="'.wp_get_attachment_url( get_post_thumbnail_id()).'" alt="" class="img-responsive">
@@ -116,13 +115,12 @@ function getfilterconsumerbyslug(){
                         $profit_per = number_format(($profit_price/$regularPrice)*100,2);
 
                         if ( $product->is_on_sale() ) :
-                        $message .= '<span class="database-sale">'.$profit_per.'% OFF</span>
-                        ';
+                        $message .= '';
                         endif;  
                      $message .= '<span class="database-updated">';
 
                      if(get_field('updated_data_year')):
-                        $message .= get_field('updated_data_year').' Updated</span>';
+                        $message .= WWDH_DATA_YEAR.' Updated</span>';
                      endif; 
 
                       $message .= '<img src="'.wp_get_attachment_url( get_post_thumbnail_id()).'" alt="" class="img-responsive">
@@ -180,13 +178,12 @@ function getfilterspecialdatabasebyslug(){
                         $profit_per = number_format(($profit_price/$regularPrice)*100,2);
 
                         if ( $product->is_on_sale() ) :
-                        $message .= '<span class="database-sale">'.$profit_per.'% OFF</span>
-                        ';
+                        $message .= '';
                         endif;  
                      $message .= '<span class="database-updated">';
 
                      if(get_field('updated_data_year')):
-                        $message .= get_field('updated_data_year').' Updated</span>';
+                        $message .= WWDH_DATA_YEAR.' Updated</span>';
                      endif; 
                       $message .= '<img src="'.wp_get_attachment_url( get_post_thumbnail_id()).'" alt="" class="img-responsive">
                       <div class="product-actions-overlay">
@@ -279,7 +276,6 @@ function worldwidedatabase_discount_offer(  ) {
 
     if ( $product->is_on_sale() ) :
     ?>
-    <div class="off-in-percentage"> <span> <?php echo $profit_per.'%';?> OFF</span> </div>
     <?php endif; ?>
     
 
@@ -290,14 +286,14 @@ add_filter( 'woocommerce_sale_flash', 'worldwidedatabase_discount_offer' );
 /*---------------Content product add updated field--------------------------*/
 function worldwidedatabase_updated_data_year(){ ?>
     
-    <div class="updated-2020"> <span> <?php if(get_field('updated_data_year')): echo get_field('updated_data_year')." Updated"; endif; ?></span> </div>
+    <div class="updated-2020"> <span> <?php echo WWDH_DATA_YEAR . " Updated"; ?></span> </div>
 <?php }
 add_action('woocommerce_before_shop_loop_item_title','worldwidedatabase_updated_data_year',9);
 
 /*--------------------Single product updated field------------------------------*/
 function worldwidedatabase_single_updated_data_year(){ ?>
     
-    <div class="single-product-updated-2020"> <span> <?php if(get_field('updated_data_year')): echo get_field('updated_data_year')." Updated"; endif; ?></span> </div>
+    <div class="single-product-updated-2020"> <span> <?php echo WWDH_DATA_YEAR . " Updated"; ?></span> </div>
 <?php }
 add_action('woocommerce_before_single_product_summary','worldwidedatabase_single_updated_data_year',9);
 

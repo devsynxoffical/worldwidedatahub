@@ -245,11 +245,10 @@ get_header();
 
                       if ( $product->is_on_sale() ) :
                     ?>
-                    <div class="off-in-percentage"> <span> <?php echo $profit_per.'%'; ?> OFF</span> </div>
                     <?php endif; ?>
                     <?php 
                      if(get_field('updated_data_year')): ?>
-                    <div class="updated-2020"> <span> 2024 Updated</span> </div>
+                    <div class="updated-2020"> <span> <?php echo WWDH_DATA_YEAR; ?> Updated</span> </div>
                   <?php endif; ?>
                     <div class="product-item-image">
                       <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_url( get_post_thumbnail_id()); ?>" alt="<?php echo the_title(); ?>"> </a>
@@ -306,12 +305,11 @@ get_header();
 
                     if ( $product->is_on_sale() ) :
                     ?>
-                    <div class="off-in-percentage"> <span> <?php echo $profit_per.'%'; ?> OFF</span> </div>
                     <?php endif; ?>
                     <?php 
                      if(get_field('updated_data_year')): 
                       ?>
-                    <div class="updated-2020"> <span> 2024 Updated</span> </div>
+                    <div class="updated-2020"> <span> <?php echo WWDH_DATA_YEAR; ?> Updated</span> </div>
                     <?php endif ?>
                     <div class="product-item-image">
                       <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_url( get_post_thumbnail_id()); ?>" alt="<?php the_title(); ?>"> </a>
@@ -394,12 +392,11 @@ get_header();
 
                     if ( $product->is_on_sale() ) :
                     ?>
-                    <div class="off-in-percentage"> <span> <?php echo $profit_per.'%'; ?> OFF</span> </div>
                   <?php endif; ?>
                   <?php 
                      if(get_field('updated_data_year')): 
                       ?>
-                    <div class="updated-2020"> <span> 2024 Updated</span> </div>
+                    <div class="updated-2020"> <span> <?php echo WWDH_DATA_YEAR; ?> Updated</span> </div>
                   <?php endif;  ?>
                     <div class="product-item-image">
                       <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_url( get_post_thumbnail_id()); ?>" alt="<?php the_title(); ?>"> </a>
@@ -455,12 +452,11 @@ get_header();
 
                     if ( $product->is_on_sale() ) :
                     ?>
-                    <div class="off-in-percentage"> <span> <?php echo $profit_per.'%'; ?> OFF</span> </div>
                   <?php endif; ?>
                   <?php 
                      if(get_field('updated_data_year')): 
                       ?>
-                    <div class="updated-2020"> <span> 2024 Updated</span> </div>
+                    <div class="updated-2020"> <span> <?php echo WWDH_DATA_YEAR; ?> Updated</span> </div>
                   <?php endif;  ?>
                     <div class="product-item-image">
                       <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_url( get_post_thumbnail_id()); ?>" alt="<?php the_title(); ?>"> </a>
@@ -535,12 +531,11 @@ get_header();
 
                     if ( $product->is_on_sale() ) :
                     ?>
-                    <div class="off-in-percentage"> <span> <?php echo $profit_per.'%';?> OFF</span> </div>
                   <?php endif; ?>
                   <?php 
                      if(get_field('updated_data_year')): 
                       ?>
-                    <div class="updated-2020"> <span> 2024 Updated</span> </div>
+                    <div class="updated-2020"> <span> <?php echo WWDH_DATA_YEAR; ?> Updated</span> </div>
                   <?php endif; ?>
                     <div class="product-item-image">
                       <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_url( get_post_thumbnail_id()); ?>" alt="<?php the_title(); ?>"> </a>
@@ -598,12 +593,11 @@ get_header();
 
                     if ( $product->is_on_sale() ) :
                     ?>
-                    <div class="off-in-percentage"> <span> <?php echo $profit_per.'%';?> OFF</span> </div>
                   <?php endif; ?>
                   <?php 
                      if(get_field('updated_data_year')): 
                       ?>
-                    <div class="updated-2020"> <span> 2023 Updated</span> </div>
+                    <div class="updated-2020"> <span> <?php echo WWDH_DATA_YEAR; ?> Updated</span> </div>
                   <?php endif; ?>
                     <div class="product-item-image">
                       <a href="<?php the_permalink(); ?>"> <img src="<?php echo wp_get_attachment_url( get_post_thumbnail_id()); ?>" alt="<?php the_title(); ?>"> </a>
