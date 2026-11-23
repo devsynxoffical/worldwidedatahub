@@ -23,7 +23,7 @@ function wwdh_should_noindex() {
 	if ( is_tag() || is_tax( 'product_tag' ) || is_author() || is_search() || is_date() ) {
 		return true;
 	}
-	if ( is_category( 'uncategorized' ) ) {
+	if ( is_category( 'uncategorized' ) || is_tax( 'product_cat', 'uncategorized' ) ) {
 		return true;
 	}
 	if ( is_page( wwdh_noindex_page_ids() ) ) {
@@ -84,6 +84,9 @@ function wwdh_redirect_map() {
 		'/canada-business-email-database/'   => '/canada-email-list/',
 		'/canada-business-email-list/'       => '/canada-email-list/',
 		'/singapore-companies-database/'     => '/singapore-email-list/',
+		// 404 fixes (23 Nov): scheduled duplicate + trashed product.
+		'/product/saudi-arabia-company-database-2/' => '/product/saudi-arabia-companies-database/',
+		'/product/saudi-arabia-consumer-email-database/' => '/saudi-arabia-email-list/',
 		// Industry page consolidation.
 		'/real-estate-email-database-global-developers/' => '/real-estate-email-list/',
 		// Duplicate "(Copy)" products -> original products.
@@ -153,7 +156,7 @@ add_filter( 'the_content', function ( $content ) {
  * stale cached pages. Bump WWDH_CACHE_VER when a deploy changes page output.
  */
 if ( ! defined( 'WWDH_CACHE_VER' ) ) {
-	define( 'WWDH_CACHE_VER', '2026-11-23-badges' );
+	define( 'WWDH_CACHE_VER', '2026-11-23-week1' );
 }
 add_action( 'init', function () {
 	if ( get_option( 'wwdh_cache_ver' ) === WWDH_CACHE_VER ) {
@@ -166,3 +169,8 @@ add_action( 'init', function () {
 		do_action( 'wpfc_clear_all_cache', true );
 	}
 }, 99 );
+
+/* Keep the 'Uncategorized' product category (term 15) out of the sitemap. */
+add_filter( 'wpseo_exclude_from_sitemap_by_term_ids', function ( $ids ) {
+	return array_merge( (array) $ids, array( 15 ) );
+} );
