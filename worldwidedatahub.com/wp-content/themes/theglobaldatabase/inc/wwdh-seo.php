@@ -147,3 +147,22 @@ add_filter( 'the_content', function ( $content ) {
 	}
 	return $content;
 }, 99 );
+
+/*
+ * Clear WP Fastest Cache once after each theme deploy, so visitors never see
+ * stale cached pages. Bump WWDH_CACHE_VER when a deploy changes page output.
+ */
+if ( ! defined( 'WWDH_CACHE_VER' ) ) {
+	define( 'WWDH_CACHE_VER', '2026-11-23-badges' );
+}
+add_action( 'init', function () {
+	if ( get_option( 'wwdh_cache_ver' ) === WWDH_CACHE_VER ) {
+		return;
+	}
+	update_option( 'wwdh_cache_ver', WWDH_CACHE_VER, false );
+	if ( function_exists( 'wpfc_clear_all_cache' ) ) {
+		wpfc_clear_all_cache( true );
+	} else {
+		do_action( 'wpfc_clear_all_cache', true );
+	}
+}, 99 );
