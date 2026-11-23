@@ -84,6 +84,26 @@ function wwdh_redirect_map() {
 		'/canada-business-email-database/'   => '/canada-email-list/',
 		'/canada-business-email-list/'       => '/canada-email-list/',
 		'/singapore-companies-database/'     => '/singapore-email-list/',
+		// Duplicate product merges (23 Nov, owner approved).
+		'/product/china-email-database/' => '/product/china-companies-database-2/',
+		'/product/china-companies-database/' => '/product/china-companies-database-2/',
+		'/product/costa-rica-company-database/' => '/product/costa-rica-company-database-2/',
+		'/product/croatia-company-database-2/' => '/product/croatia-company-database/',
+		'/product/cyprus-company-database-2-2/' => '/product/cyprus-company-database/',
+		'/product/cyprus-companies-database/' => '/product/cyprus-company-database/',
+		'/product/estonia-company-database-2/' => '/product/estonia-companies-database/',
+		'/product/finland-companies-database/' => '/product/finland-company-database-2/',
+		'/product/finland-company-database/' => '/product/finland-company-database-2/',
+		'/product/macedonia-company-database-2/' => '/product/macedonia-company-database/',
+		'/product/netherlands-antilles-company-database/' => '/product/netherlands-companies-database-2/',
+		'/product/netherlands-antilles-business-email-database/' => '/product/netherlands-companies-database-2/',
+		'/product/puerto-rico-company-database-2/' => '/product/puerto-rico-company-database/',
+		'/product/serbia-company-database/' => '/product/serbia-company-database-2/',
+		'/product/spain-company-database/' => '/product/spain-company-database-2-2/',
+		'/product/ukraine-company-database-2/' => '/product/ukraine-company-database/',
+		'/product/united-kingdom-company-database/' => '/product/united-kingdom-company-database-2/',
+		'/product/united-kingdom-companies-database/' => '/product/united-kingdom-company-database-2/',
+		'/product/uk-companies-database/' => '/product/united-kingdom-company-database-2/',
 		// 404 fixes (23 Nov): scheduled duplicate + trashed product.
 		'/product/saudi-arabia-company-database-2/' => '/product/saudi-arabia-companies-database/',
 		'/product/saudi-arabia-consumer-email-database/' => '/saudi-arabia-email-list/',
@@ -156,7 +176,7 @@ add_filter( 'the_content', function ( $content ) {
  * stale cached pages. Bump WWDH_CACHE_VER when a deploy changes page output.
  */
 if ( ! defined( 'WWDH_CACHE_VER' ) ) {
-	define( 'WWDH_CACHE_VER', '2026-11-23-week1' );
+	define( 'WWDH_CACHE_VER', '2026-11-23-merges' );
 }
 add_action( 'init', function () {
 	if ( get_option( 'wwdh_cache_ver' ) === WWDH_CACHE_VER ) {
