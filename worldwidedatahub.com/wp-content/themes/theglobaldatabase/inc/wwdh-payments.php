@@ -26,10 +26,29 @@ if ( ! WWDH_STRIPE_ONLY ) {
 	return;
 }
 
+/* Stripe wallet / express buttons removed too (owner, 24 Nov): card form only. */
+function wwdh_is_wallet_gateway( $id ) {
+	return in_array( (string) $id, array( 'stripe_googlepay', 'stripe_applepay', 'stripe_payment_request', 'stripe_link_checkout', 'stripe_amazonpay' ), true );
+}
+
 function wwdh_is_stripe_gateway( $id ) {
 	$id = (string) $id;
+	if ( wwdh_is_wallet_gateway( $id ) ) {
+		return false;
+	}
 	return 'stripe' === $id || 0 === strpos( $id, 'stripe_' );
 }
+
+/* Payment Plugins for Stripe: no express buttons on product, cart, mini-cart. */
+foreach ( array( 'wc_stripe_product_payment_methods', 'wc_stripe_cart_payment_methods', 'wc_stripe_mini_cart_payment_methods', 'wc_stripe_express_payment_methods' ) as $wwdh_hook ) {
+	add_filter( $wwdh_hook, function () {
+		return array();
+	}, 999 );
+}
+unset( $wwdh_hook );
+
+/* WooCommerce Stripe Gateway (official): hide its express buttons on product pages. */
+add_filter( 'wc_stripe_hide_payment_request_on_product_page', '__return_true' );
 
 function wwdh_is_paypal_gateway( $id ) {
 	$id = (string) $id;
@@ -80,7 +99,11 @@ add_action( 'wp_head', function () {
 		. '#ppc-button-applepay-container,#ppc-button-applepay-container-minicart,'
 		. '#ppcp-messages,.ppcp-messages,.ppcp-button-apm,'
 		. '#wcpay-express-checkout-element,#wcpay-express-checkout-button-separator,'
-		. '.wcpay-express-checkout-wrapper,#wcpay-payment-request-wrapper'
+		. '.wcpay-express-checkout-wrapper,#wcpay-payment-request-wrapper,'
+		. '.wc-stripe-product-checkout-container,.wc-stripe-cart-checkout-container,'
+		. '.wc-stripe-payment-request-container,#wc-stripe-express-checkout-element,'
+		. '#wc-stripe-express-checkout-button-separator,.wc-stripe-banner-checkout,'
+		. '.payment_method_stripe_googlepay,.payment_method_stripe_applepay,.payment_method_stripe_payment_request'
 		. '{display:none!important}</style>' . "\n";
 }, 99 );
 
