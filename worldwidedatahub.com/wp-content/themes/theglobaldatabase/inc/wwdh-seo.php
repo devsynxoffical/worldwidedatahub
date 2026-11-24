@@ -29,6 +29,24 @@ function wwdh_should_noindex() {
 	if ( is_page( wwdh_noindex_page_ids() ) ) {
 		return true;
 	}
+	if ( wwdh_is_filtered_shop_url() ) {
+		return true;
+	}
+	return false;
+}
+
+/* Sorted / filtered / add-to-cart shop URLs: duplicate listings, keep out of the index. */
+function wwdh_is_filtered_shop_url() {
+	if ( empty( $_GET ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+		return false;
+	}
+	foreach ( array_keys( $_GET ) as $key ) { // phpcs:ignore WordPress.Security.NonceVerification
+		$key = strtolower( (string) $key );
+		if ( in_array( $key, array( 'orderby', 'min_price', 'max_price', 'rating_filter', 'add-to-cart', 'product_view', 'per_page' ), true )
+			|| 0 === strpos( $key, 'filter_' ) || 0 === strpos( $key, 'query_type_' ) ) {
+			return true;
+		}
+	}
 	return false;
 }
 
@@ -176,7 +194,7 @@ add_filter( 'the_content', function ( $content ) {
  * stale cached pages. Bump WWDH_CACHE_VER when a deploy changes page output.
  */
 if ( ! defined( 'WWDH_CACHE_VER' ) ) {
-	define( 'WWDH_CACHE_VER', '2026-11-24-head-cleanup' );
+	define( 'WWDH_CACHE_VER', '2026-11-24-priority-titles' );
 }
 add_action( 'init', function () {
 	if ( get_option( 'wwdh_cache_ver' ) === WWDH_CACHE_VER ) {
@@ -193,4 +211,115 @@ add_action( 'init', function () {
 /* Keep the 'Uncategorized' product category (term 15) out of the sitemap. */
 add_filter( 'wpseo_exclude_from_sitemap_by_term_ids', function ( $ids ) {
 	return array_merge( (array) $ids, array( 15 ) );
+} );
+
+/*
+ * Priority page titles and meta descriptions (SEO plan P1, 24 Nov 2026).
+ * Chosen from Search Console: pages ranking ~2-30 with high impressions and
+ * near-zero CTR. These override Yoast for the listed URLs only, so edit them
+ * here, not in the Yoast box. {Y} is replaced with WWDH_DATA_YEAR.
+ * Claims are limited to what the site offers: company names, emails,
+ * phone/mobile numbers, and a free sample (Request sample form).
+ */
+function wwdh_priority_meta_map() {
+	return array(
+		'/product/russia-companies-database/' => array(
+			'Russia Companies Database {Y} – Company Emails & Phones',
+			'Russia companies database with company names, business emails and phone numbers for B2B marketing. Updated {Y}. Request a free sample before you buy.',
+		),
+		'/product/russia-business-email-database/' => array(
+			'Russia Business Email List {Y} – B2B Email Database',
+			'Russia business email list for B2B outreach: company names, business email addresses and phone numbers. Updated {Y}. Request a free sample list.',
+		),
+		'/product/iraq-companies-database/' => array(
+			'Iraq Companies Database {Y} – Business Emails & Phones',
+			'Iraq business database with company names, email addresses and mobile numbers for B2B marketing. Updated {Y}. Request a free sample of the Iraq list.',
+		),
+		'/product/afghanistan-companies-database/' => array(
+			'Afghanistan Companies Database {Y} – Phone & Email List',
+			'Afghanistan company database with business phone numbers, mobile numbers, emails and company names. Updated {Y}. Request a free sample list.',
+		),
+		'/product/qatar-mobile-numbers-database/' => array(
+			'Qatar Mobile Number List {Y} – Business Phone Database',
+			'Qatar mobile number list with business contacts, company names and emails for SMS and telemarketing campaigns. Updated {Y}. Request a free sample first.',
+		),
+		'/product/saudi-arabia-companies-database/' => array(
+			'Saudi Arabia Companies Database {Y} – Mobile & Email List',
+			'Saudi Arabia business database with company names, mobile numbers and email addresses. Updated {Y}. Request a free sample of the Saudi mobile number list.',
+		),
+		'/whatsapp-mobile-number-database-free-download/' => array(
+			'WhatsApp Mobile Number Database – Free Sample Download',
+			'Download a free sample of our WhatsApp mobile number database, then order the full list for your marketing campaigns. Updated {Y}.',
+		),
+		'/product/germany-company-database/' => array(
+			'Germany Business Email List {Y} – Company Database',
+			'Germany business email list with company names, emails and phone numbers for B2B marketing. Updated {Y}. Request a free sample of the German database.',
+		),
+		'/product/netherlands-companies-database/' => array(
+			'Netherlands Business Email List {Y} – Company Database',
+			'Netherlands business email list with Dutch company names, emails and phone numbers for B2B campaigns. Updated {Y}. Request a free sample before you buy.',
+		),
+		'/product/france-companies-database/' => array(
+			'France Business Email List {Y} – Company Database',
+			'France business email list with French company names, email addresses and phone numbers for B2B marketing. Updated {Y}. Request a free sample list.',
+		),
+		'/product/yemen-company-database/' => array(
+			'Yemen Company Database {Y} – Business Phone & Email List',
+			'Yemen company database with business names, phone numbers, mobile numbers and emails. Updated {Y}. Request a free sample of the Yemen business list.',
+		),
+		'/product/pakistan-companies-database/' => array(
+			'Pakistan Companies Database {Y} – Mobile & Email List',
+			'Pakistan companies database with company names, mobile numbers and business emails for B2B marketing. Updated {Y}. Request a free sample before you buy.',
+		),
+		'/product/forex-trading-database/' => array(
+			'Forex Traders Email List {Y} – Forex Trading Database',
+			'Forex traders email list for brokers and trading platforms: trader contacts with emails and phone numbers. Updated {Y}. Request a free sample list.',
+		),
+		'/product/mortgage-brokers-database/' => array(
+			'Mortgage Brokers Email Database {Y} – Broker Contact List',
+			'Mortgage brokers email database with broker contacts, emails and phone numbers for B2B outreach. Updated {Y}. Request a free sample before you buy.',
+		),
+		'/product/united-arab-consumer-email-database/' => array(
+			'UAE Consumer Email List {Y} – Consumer Email Database',
+			'UAE consumer email list for marketing campaigns in Dubai, Abu Dhabi and across the Emirates. Updated {Y}. Request a free sample of the UAE email database.',
+		),
+	);
+}
+
+function wwdh_priority_meta( $index ) {
+	if ( is_admin() || ! ( is_singular() || is_front_page() ) ) {
+		return null;
+	}
+	$path = wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '/', PHP_URL_PATH ); // phpcs:ignore
+	$path = trailingslashit( strtolower( (string) $path ) );
+	$map  = wwdh_priority_meta_map();
+	if ( ! isset( $map[ $path ][ $index ] ) ) {
+		return null;
+	}
+	return str_replace( '{Y}', WWDH_DATA_YEAR, $map[ $path ][ $index ] );
+}
+
+foreach ( array( 'wpseo_title', 'wpseo_opengraph_title', 'wpseo_twitter_title' ) as $wwdh_hook ) {
+	add_filter( $wwdh_hook, function ( $value ) {
+		$v = wwdh_priority_meta( 0 );
+		return null === $v ? $value : $v;
+	}, 20 );
+}
+foreach ( array( 'wpseo_metadesc', 'wpseo_opengraph_desc', 'wpseo_twitter_description' ) as $wwdh_hook ) {
+	add_filter( $wwdh_hook, function ( $value ) {
+		$v = wwdh_priority_meta( 1 );
+		return null === $v ? $value : $v;
+	}, 20 );
+}
+unset( $wwdh_hook );
+
+/* Product structured data: add brand (WooCommerce core outputs the rest). */
+add_filter( 'woocommerce_structured_data_product', function ( $markup ) {
+	if ( is_array( $markup ) && empty( $markup['brand'] ) ) {
+		$markup['brand'] = array(
+			'@type' => 'Brand',
+			'name'  => 'WorldWide DataHub',
+		);
+	}
+	return $markup;
 } );
