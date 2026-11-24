@@ -263,6 +263,7 @@ include( get_template_directory().'/inc/support.php');
 /* Lead capture + data landing pages */
 require_once get_template_directory() . '/inc/wwdh-leads.php';
 require_once get_template_directory() . '/inc/wwdh-seo.php';
+require_once get_template_directory() . '/inc/wwdh-shop.php';
 add_action( 'wp_enqueue_scripts', function () {
 	if ( is_page_template( 'template-data-landing.php' ) || is_page( 173 ) ) {
 		$dir = get_template_directory();

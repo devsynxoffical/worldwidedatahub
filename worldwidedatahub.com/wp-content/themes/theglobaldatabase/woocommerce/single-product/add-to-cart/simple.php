@@ -59,10 +59,7 @@ if ( $product->is_in_stock() ) : ?>
 		<h5>Important :</h5>
 		<p> After making payment you will get instant download link on your email.</p>	
 	</div>
-    <div class="database_main_features">
-		<h5>Fields :</h5>
-		<p> <span>First Name</span> <span>Business Name</span> <span>Address</span> <span>State</span> <span>Email id</span> <span>Phone no.</span> <span>Fax</span><span>Website</span></p>	
-	</div>	
+    <?php /* Fields list moved to checkout (inc/wwdh-shop.php). */ ?>
 	<div class="clearfix"></div>
 
 	<?php do_action( 'woocommerce_after_add_to_cart_form' ); ?>
