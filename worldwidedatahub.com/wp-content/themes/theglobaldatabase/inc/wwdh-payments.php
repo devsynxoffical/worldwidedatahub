@@ -93,3 +93,24 @@ add_action( 'admin_notices', function () {
 		. 'so checkout is falling back to the other enabled methods (PayPal stays hidden). '
 		. 'Enable Stripe in WooCommerce &rarr; Settings &rarr; Payments.</p></div>';
 } );
+
+/*
+ * Product pages: no express payment buttons (Google Pay / Apple Pay / Link
+ * from Payment Plugins for Stripe, or Stripe's own express checkout).
+ * Customers use Add to cart -> checkout -> card form. Owner request 24 Nov.
+ */
+add_action( 'woocommerce_before_add_to_cart_button', function () {
+	if ( function_exists( 'wc_stripe_get_container' ) && class_exists( '\PaymentPlugins\Stripe\Checkout\ExpressCheckoutRenderer' ) ) {
+		$renderer = wc_stripe_get_container()->get( \PaymentPlugins\Stripe\Checkout\ExpressCheckoutRenderer::class );
+		remove_action( 'woocommerce_after_add_to_cart_button', array( $renderer, 'render_product_buttons' ) );
+		remove_action( 'woocommerce_before_add_to_cart_button', array( $renderer, 'render_product_buttons' ) );
+	}
+	remove_action( 'woocommerce_after_add_to_cart_button', array( 'WC_Stripe_Field_Manager', 'output_product_checkout_fields' ) );
+	remove_action( 'woocommerce_before_add_to_cart_button', array( 'WC_Stripe_Field_Manager', 'output_product_checkout_fields' ) );
+}, 0 );
+add_filter( 'wc_stripe_hide_payment_request_on_product_page', '__return_true' );
+add_action( 'wp_head', function () {
+	if ( function_exists( 'is_product' ) && is_product() ) {
+		echo '<style id="wwdh-no-product-express">.wc-stripe-product-checkout-container,#wc-stripe-express-checkout-element,#wc-stripe-express-checkout-button-separator{display:none!important}</style>' . "\n";
+	}
+}, 99 );
