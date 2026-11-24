@@ -1,160 +1,272 @@
-# WorldWide DataHub: SEO Plan (refined)
+# SEO Strategy and Implementation Plan (refined)
 
-Site: https://worldwidedatahub.com/ · Duration: 3 months (from 24 Nov 2026) · Owner: shehryarkashif
+**Website:** https://worldwidedatahub.com/ · **Duration:** initial 3 months (24 Nov 2026 – 23 Feb 2027) · **Version:** v2, 24 Nov 2026
 
-This builds on the original 14-section plan. It keeps the same structure and goals and adds:
-a measured baseline, priorities ranked by Search Console data, a week-by-week schedule, who does
-what, the access each task needs, and targets.
+**Objective:** improve Google rankings, increase organic traffic, generate qualified leads and
+increase product sales from organic search.
+
+Status markers: ✅ done · 🔄 in progress · ⏳ waiting on approval or access · ⬜ not started
 
 ---
 
-## 1. Baseline (Google Search Console, 27 Oct – 21 Nov 2026)
+## 1. Project overview
+
+WorldWideDataHub.com is a WordPress + WooCommerce shop selling business, consumer, mobile-number
+and niche contact databases by country. About 1,000 product URLs are in the sitemap.
+
+**Starting point (Google Search Console, 27 Oct – 21 Nov 2026)**
 
 | Metric | Value |
 |---|---|
 | Clicks | 130 (about 5/day) |
 | Impressions | 7,402 |
 | CTR | 1.8% |
-| Average position | ~42 |
-| Trend | Impressions down from ~330/day to ~200/day; position slipped from 37 to 43 |
-| Product sitemap | 991 URLs submitted; only ~250 products got any impressions |
-| Top markets | US desktop 2,707 impressions (position 49), UK 877 (position 63). Most clicks come from Pakistan, Iraq, India and Malaysia on mobile |
+| Average position | ~42 (page 4–5) |
+| Trend | Impressions fell from ~330/day to ~200/day; position slipped from 37 to 43 |
+| Products with any impressions | ~250 of 991 |
+| Largest markets | US (2,707 impressions, position 49) and UK (877, position 63). Most clicks come from Pakistan, Iraq, India and Malaysia, mostly on mobile |
 
-Data comes through Windsor.ai, whose trial is limited to 30 days. A 3-month baseline needs a
-Windsor.ai upgrade or a direct export from Search Console.
+**What the data changes about the original plan**
 
-### What the data changes about the original plan
-
-1. **Head terms are out of reach for now.** "business email database", "uk email database",
-   "consumer email list" and similar rank between 50 and 85. Targeting them first would take
-   months to show results.
-2. **Long-tail country terms are already close to the top.** Examples: "russia companies database"
-   (position 9), "afghanistan phone number list" (5), "saudi arabia mobile number list" (2),
-   "qatar mobile number list" (2.5), "iraq database" (10). These rank in the top 10 but get almost
-   no clicks, so better titles, descriptions and on-page content can win traffic within weeks.
-   **They are the Month 1 priority.**
+1. **Start with pages that are already close to the top.** Searches like "russia companies
+   database" (position 9), "saudi arabia mobile number list" (2), "qatar mobile number list"
+   (2.5), "afghanistan phone number list" (5) and "iraq database" (10) rank well but get almost no
+   clicks. Better titles and content can win traffic within weeks.
+2. **Head terms are a 6–12 month goal.** "business email database", "uk email database" and
+   similar rank 50–85. Months 1–2 should not depend on them.
 3. **Duplicate products are the main technical problem.** Many countries have 2–3 product URLs
-   for the same database (for example `-companies-database`, `-company-database`,
-   `-company-database-2`). They compete with each other in Google. Week 1 merged 13 groups;
-   about 30 remain.
-4. **Many searches contain "free", "pdf" or "list".** Titles should lead with "list" wording and
-   offer the free sample that the site already provides.
+   for the same data, and they compete with each other.
+4. **Searchers often add "list", "free", "pdf" or "mobile number".** Titles and content should
+   match those words and offer the free sample.
 
-## 2. Already completed (Week 1, 18–24 Nov)
+**How changes are made:** theme code is version-controlled in git and deploys automatically to the
+server over FTPS when merged to `main`. Page and product text lives in the WordPress database and
+needs wp-admin or WordPress REST API access.
 
-- Theme deploys automatically from git to the server over FTPS (GitHub Actions, push to `main`).
-- noindex and sitemap exclusion for tag, author, search, date and Uncategorized archives, plus
-  payment and thank-you pages.
-- Permanent redirect map: UAE and Saudi post clusters into hub pages, competing pages merged into
-  `/[country]-email-list/` hubs, 13 duplicate product groups merged, junk pages redirected.
-- Homepage H1; real H1s on archive and product pages; excerpts instead of full posts on listing
-  pages; alt text; lighter homepage carousels.
-- Lead form (`[wwdh_lead_form]`) with leads stored in wp-admin; landing-page template with FAQ
-  schema.
-- IndexNow key; Google "preferred source" badge; "Updated 2026" badges.
-- 24 Nov: outdated robots-related meta tags removed from `<head>`.
+## 2. Website audit and initial analysis
 
-## 3. Priorities, ranked by expected impact
-
-| # | Work | Why | Effort |
-|---|---|---|---|
-| P1 | New titles and descriptions for 15 pages in or near the top 10 | Rankings exist but CTR is close to 0 | Low (code) |
-| P2 | Merge the remaining ~30 duplicate product groups | Rankings are split between URLs | Low (code, owner approves the list) |
-| P3 | Unique content and FAQs on those 15 pages | Moves them from positions 6–10 into the top 3 | Medium |
-| P4 | Country hub pages linking to their products | Builds topical authority for "[country] email list" searches | Medium |
-| P5 | Structured data: Product with brand, Breadcrumb, Organization, FAQ, Article | Richer search results; supports AEO/GEO | Low–medium |
-| P6 | Speed: self-hosted CSS and fonts, deferred chat and analytics scripts | Core Web Vitals | Medium |
-| P7 | Trust pages: About, data sourcing, privacy, refund policy | Conversions and E-E-A-T; this is a sensitive industry | Medium (owner supplies facts) |
-| P8 | Blog: 8 articles | Informational traffic and internal links | Ongoing |
-| P9 | Links: directories, data marketplaces, guest posts | Authority for the head terms in Months 3–6 | Ongoing |
-
-## 4. Technical SEO additions to the original section 4
-
-- **Duplicates:** keep one URL per country and data type, and redirect the others to it. The kept
-  URL is whichever has the best Search Console position or the most clicks.
-- **Filtered and sorted shop URLs** (`?orderby=`, `?filter_*`, `?min_price=`, `?add-to-cart=`):
-  noindex, follow.
-- **One analytics setup:** GA4 is hard-coded in `header.php`, and the GTM, GA and Site Kit
-  plugins are also installed. Visits may be counted twice. Keep one setup and track lead-form
-  submissions, sample requests and purchases as conversions.
-- **Sitemaps:** each sitemap shows 1 error in Search Console. Find and fix it, then resubmit.
-- **Titles in code:** priority page titles are set in `inc/wwdh-seo.php`, which takes priority
-  over Yoast. When a page is in that map, edit its title there, not in Yoast.
-- **Security (not SEO):** `wp-config.php` files with database passwords are committed to git.
-  Keep the repo private and rotate the passwords if it was ever shared.
-
-## 5. Keyword targeting (refined)
-
-| Tier | Keyword type | Example | Target URL |
-|---|---|---|---|
-| 1 (Month 1) | Country + list/database, already top 20 | russia companies database, qatar mobile number list, iraq database, afghanistan phone number list | Existing product page |
-| 2 (Month 2) | Country + business email list, top 20–50 | germany business email list (29), netherlands business email list (19), france business email list (16), new zealand business email list (28) | Country hub page plus product |
-| 3 (Month 2–3) | Niche lists | forex traders email list, mortgage brokers email database, iphone users database | Product page |
-| 4 (Month 3+) | Head terms | business email database, b2b email database, uk email database | Category page, homepage, links |
-| Informational | Questions | what is a b2b email database, how to verify business emails | Blog |
-
-Each keyword gets one target URL. A keyword-to-URL map will be kept in `docs/keyword-map.csv`
-so two pages never compete for the same keyword.
-
-## 6. Three-month schedule
-
-### Month 1: technical foundation and quick wins
-- **Week 2 (24–30 Nov):** P1 titles and descriptions for 15 pages · noindex on filtered shop URLs ·
-  brand added to Product schema · duplicate merge list sent for approval.
-- **Week 3:** apply the approved duplicate merges · full crawl (needs live-site access) · fix
-  404s, redirect chains and the sitemap errors · analytics clean-up.
-- **Week 4:** Breadcrumb, Organization and FAQ schema · speed work (P6) · keyword map v1 ·
-  competitor list.
-
-### Month 2: on-page and content
-- Homepage: title, intro copy, FAQ section, links to hubs.
-- Category pages (Business Email, Consumer Email, Special, Whois, Mobile): unique intro text,
-  FAQs, titles.
-- 15–20 product pages: unique descriptions, FAQs and related links, starting with the P1 pages.
-- Country hubs for the top 8 countries by impressions.
-- 4 blog articles.
-
-### Month 3: authority and growth
-- Link building: 20–30 quality directories and data marketplaces, plus 4–6 guest posts.
-- AEO/GEO: question-based FAQs, consistent business details (NAP) across platforms, an About page
-  with entity details.
-- 4 more blog articles; conversion tracking review; month-3 report and next-phase roadmap.
-
-## 7. Who does what
-
-| Task | Done by | Needs |
+| Check | Status | Notes |
 |---|---|---|
-| Theme code: titles, schema, redirects, speed, templates | Claude, via git (deploy on merge to `main`) | Approval for merges |
-| Page and product text in WordPress (database) | Claude via WordPress REST API, or owner | WordPress Application Password |
-| Crawl, live checks, PageSpeed | Claude | Network access to worldwidedatahub.com (not enabled) |
-| Search Console data | Claude via Windsor.ai | Connected. 30-day limit on trial |
-| Facts: data sources, record counts, update dates, refund terms, testimonials | Owner | n/a |
-| Competitor and backlink data | Claude | Ahrefs or Semrush access (optional; Windsor.ai supports both) |
-| Link outreach and directory accounts | Owner or Claude drafts | Business email account |
+| Site structure and navigation | 🔄 | Home → category → product. Country hub pages (`/[country]-email-list/`) were added in Week 1 |
+| Full crawl (Screaming Frog) | ⏳ | Needs live-site access, or a crawl export from the owner |
+| Indexing and crawling | 🔄 | Thin archives noindexed ✅. Each sitemap shows 1 error in Search Console |
+| Titles and meta descriptions | 🔄 | 15 priority pages rewritten ✅. Remaining pages need the crawl |
+| Headings (H1–H3) | ✅ | H1 on homepage, archive and product pages; footer heading order fixed |
+| Duplicate, missing and thin content | 🔄 | 13 duplicate product groups merged ✅, ~30 more proposed ⏳. Product descriptions use the same template text |
+| Broken links and 404s | 🔄 | 2 product 404s fixed ✅. Full check needs the crawl |
+| URLs and canonicals | 🔄 | Sorted and filtered shop URLs noindexed ✅ |
+| XML sitemap and robots.txt | 🔄 | Noindexed URLs excluded from the sitemap ✅. Sitemap error still to fix |
+| Mobile and Core Web Vitals | ⬜ | Bootstrap, Font Awesome and fonts load from external servers and block rendering; chat and analytics scripts sit in `<head>` |
+| Images and alt text | 🔄 | Logo, header and homepage alt text ✅. Product images still to do |
+| Internal linking | ⬜ | Needs the crawl |
+| Rankings and traffic | ✅ | Baseline in section 1 |
+| Data consistency | ⬜ | Product text says "updated April 2025"; badges and titles say 2026. The owner must confirm which is correct |
+| Analytics | ⬜ | GA4 is hard-coded **and** the GTM, GA and Site Kit plugins are installed, so visits may be counted twice |
 
-## 8. Targets for the end of Month 3 (indicative)
+**Deliverable:** audit report in `docs/audit/`, delivered at the end of Week 3.
+
+## 3. Keyword research and competitor analysis
+
+**Targets by tier, ordered by how quickly they can win:**
+
+| Tier | When | Keyword type | Examples (current position) | Target URL |
+|---|---|---|---|---|
+| 1 | Month 1 | Country + "database", "list" or "mobile number list", already in the top 20 | russia companies database (9), saudi arabia mobile number list (2), qatar mobile number list (2.5), afghanistan phone number list (5), iraq database (10), yemen company database (10) | Existing product page |
+| 2 | Month 2 | Country + "business email list", positions 15–50 | france (16), netherlands (19), germany (29), new zealand (28), hong kong (43), singapore (42), uk (37) | Country hub + main product |
+| 3 | Month 2–3 | Niche lists | forex traders email list (22), mortgage brokers email database (34), iphone users database (14), church database (35) | Product page |
+| 4 | Month 3+ | Head terms from the original plan | business email database, b2b email database, buy business email list, consumer email database, mobile number database, company contact database | Category pages, homepage, links |
+| Info | Month 2–3 | Questions | what is a b2b email database, how to verify business emails, business vs consumer email list | Blog |
+
+**Country priority** (impressions and buyer value): USA, UK, Canada, Australia, UAE, Saudi
+Arabia, Germany, France, Netherlands, Singapore, then the existing Tier 1 countries (Russia, Iraq,
+Afghanistan, Qatar, Pakistan, Yemen).
+
+**Competitor analysis:** identify the 5–8 domains that rank in the top 10 for Tier 2 and Tier 4
+terms. Then compare their page types, content depth, FAQs, schema and backlinks to find gaps.
+
+**Deliverable:** `docs/keyword-map.csv` (keyword, intent, volume, current position, one target URL)
+plus a competitor summary. One keyword maps to one URL, so our own pages never compete.
+
+## 4. Technical SEO optimization
+
+| Task | Status |
+|---|---|
+| noindex on thin archives, payment and thank-you pages; excluded from sitemap | ✅ |
+| Redirect map: consolidated posts, hubs, 13 duplicate product groups, junk pages | ✅ |
+| Outdated and conflicting robots meta tags removed from `<head>` | ✅ |
+| noindex on sorted and filtered shop URLs (`?orderby`, `?filter_*`, `?min_price`, `?add-to-cart`) | ✅ |
+| Brand added to Product schema | ✅ |
+| Merge ~30 remaining duplicate product groups (`docs/duplicate-merge-proposal.md`) | ⏳ owner approval |
+| Fix sitemap error; resubmit sitemaps | ⬜ Week 3 |
+| Fix 404s and redirect chains found in the crawl | ⏳ crawl |
+| Breadcrumb, Organization and WebSite schema (check what Yoast already outputs, add only what's missing) | ⬜ Week 4 |
+| FAQ schema on product and hub pages | ⬜ Month 2 |
+| Speed: self-host Bootstrap, Font Awesome and fonts; defer chat (Olark), Clarity and Facebook Pixel; image sizes; lighter homepage | ⬜ Week 4 |
+| One analytics setup, with conversion events (purchase, sample request, lead form) | ⬜ Week 3 |
+| Pagination and filter indexing review | 🔄 |
+| HTTPS and the www / non-www redirect | ⏳ crawl |
+| Security: database passwords in `wp-config.php` are committed to git; keep the repo private and rotate them | ⬜ owner |
+
+## 5. On-page SEO optimization
+
+**Homepage** (Month 2): H1 ✅. Still to do: title and meta targeting "B2B email lists and business
+databases by country", a short intro paragraph, links to the top 10 country hubs and the 5
+categories, a 5-question FAQ with FAQ schema, and image alt text.
+
+**Category pages** (Month 2): Business Email Data, Consumer Email Data, Special Database, Whois
+Database, Mobile Number Databases. Each gets a unique title and meta, a 150–250 word intro above the
+products, an FAQ, and links to related hubs. Note: the European consumer and South American
+business categories already get 94–134 impressions at positions 55–73.
+
+**Product and country pages:**
+- **Priority 15 (Month 1–2):** Russia companies, Russia business email, Iraq, Afghanistan, Qatar
+  mobile, Saudi Arabia, the WhatsApp page, Germany, Netherlands, France, Yemen, Pakistan, Forex,
+  Mortgage brokers, UAE consumer.
+  - Titles and meta ✅
+  - Still to do: unique description (what's in the file, field list, record count only if the
+    owner confirms it, update date, use cases, delivery), 4–6 FAQs, links to the hub and related
+    products.
+- **Next 5:** USA, UK, Canada, Australia, Singapore.
+- **The other ~970 products:** improve the shared template rather than writing each by hand. Add
+  a short per-country intro and FAQ block built from real product data: country, data type, fields,
+  update date. Real product data keeps the pages from looking like thin doorway pages.
+- **Fields list:** moved from the product page to checkout at the owner's request ✅. Keep the
+  content details in the description text.
+
+## 6. Content marketing and blog SEO
+
+Four articles per month from Month 2. Each targets one keyword and links to two or more commercial
+pages.
+
+| # | Title | Target keyword | Links to |
+|---|---|---|---|
+| 1 | What Is a B2B Email Database and How Does It Work? | b2b email database | Business category, USA and UK hubs |
+| 2 | Business Email List vs Consumer Email List: Key Differences | business vs consumer email list | Both categories |
+| 3 | How to Verify Business Email Addresses Before a Campaign | how to verify business email addresses | Products (data quality) |
+| 4 | What Information Is Included in a Company Database? | company database fields | Top products |
+| 5 | How to Evaluate the Quality of a B2B Contact Database | b2b data quality | Hubs |
+| 6 | Free vs Paid Business Email Lists: What You Actually Get | free business email list | Free sample pages (matches "free" and "pdf" searches) |
+| 7 | Buying a Mobile Number List for SMS Marketing: Rules by Country | mobile number list | Qatar, Saudi and WhatsApp pages |
+| 8 | GDPR, PECR and CAN-SPAM: Responsible B2B Email Marketing | gdpr b2b email marketing | About and trust pages |
+
+Also: update or merge old blog posts. Week 1 already redirected 14 UAE and Saudi posts that weren't
+indexed. Add Article schema with author and dates. Use only claims we can support with evidence.
+
+## 7. Internal linking optimization
+
+Target structure: **Home → Category → Country hub → Products**, plus **Blog → Hub or Product**.
+- Breadcrumbs on product and hub pages.
+- "Other [Country] databases" links on each product page.
+- Each hub links to every product for its country; each product links back to its hub.
+- Fix orphan pages found in the crawl.
+- Descriptive link text ("Germany business email list", never "click here").
+
+## 8. Off-page SEO and link building (Month 3, then ongoing)
+
+- **Audit:** current backlinks and toxic links. Needs Ahrefs or Semrush; Windsor.ai can connect
+  either.
+- **Targets:** 20–30 relevant directories and B2B data marketplaces, 4–6 guest articles on B2B
+  marketing and sales sites, and partnerships with CRM and email-tool blogs.
+- **Avoid:** paid link networks, PBNs and mass directory blasts. This industry is already under
+  Google spam scrutiny.
+- Track new and lost referring domains each month.
+
+## 9. AEO and GEO optimization
+
+- Question-and-answer FAQs on the priority 15 pages, hubs and categories, with FAQ schema.
+- Clear one-sentence answers at the top of blog posts.
+- Organization schema with the same name, address, phone, email and social profiles everywhere.
+- An About page that clearly describes the company: when it started, where it is based, how the
+  data is sourced, contact details.
+- Consistent business details on Google Business Profile, LinkedIn and directories.
+
+## 10. Website trust and conversion optimization
+
+| Task | Status |
+|---|---|
+| Payments working: PayPal is restricted, so checkout is Stripe card only for now; Google Pay and Apple Pay buttons removed | ✅ (owner to confirm with a test order) |
+| Lead and sample form stored in wp-admin | ✅ |
+| One correct "updated" date across product text, badges and titles | ⏳ owner |
+| About page: company details, data sourcing, verification process | ⬜ owner provides the facts |
+| Visible refund policy, privacy policy and lawful-use note on consumer and WhatsApp products | ⬜ |
+| Genuine testimonials and reviews only | ⬜ owner provides |
+| Clear calls to action: "Get a free sample" next to "Add to cart" | 🔄 |
+
+Compliance: consumer and WhatsApp databases carry legal risk under GDPR, UK GDPR, PECR and
+CAN-SPAM. Pages should explain lawful use and opt-out handling, and not promote cold-messaging EU or
+UK consumers.
+
+## 11. Tracking and reporting
+
+| Tool | Status |
+|---|---|
+| Google Search Console | ✅ through Windsor.ai (trial: last 30 days only) |
+| GA4 | ⏳ connect it to Windsor.ai; remove duplicate tracking |
+| Screaming Frog and PageSpeed | ⏳ live-site access |
+| Ahrefs or Semrush | ⬜ optional |
+
+**Targets for the end of Month 3**
 
 | KPI | Baseline | Target |
 |---|---|---|
 | Clicks per 28 days | ~140 | 400+ |
 | CTR | 1.8% | 3.5%+ |
-| Priority pages in the top 5 | ~3 | 10 of 15 |
-| Duplicate product URLs live | ~30 groups | 0 |
-| Organic leads and sample requests | Not tracked | Tracked and reported monthly |
+| Priority 15 pages in the top 5 | ~3 | 10 |
+| Tier 2 "[country] business email list" keywords in the top 20 | 2 | 8 |
+| Duplicate product groups | ~30 | 0 |
+| Organic sample requests and orders | not tracked | tracked monthly |
 
-## 9. Content and compliance rules
+Reports: a short weekly update, a full monthly report, and the git commit history as the change log.
 
-- Only make claims the business can show evidence for. Record counts, accuracy percentages and
-  "verified" claims need owner confirmation before they are published.
-- Consumer and WhatsApp databases carry legal risk under GDPR, UK GDPR, PECR and CAN-SPAM.
-  Their pages should explain lawful use and opt-out handling, and avoid targeting EU/UK consumers
-  without a legal basis.
-- No fake reviews, testimonials or AI-padded filler. Every page should answer what the buyer
-  actually needs to know.
+## 12. Execution timeline
 
-## 10. Reporting
+| Week | Focus | Work |
+|---|---|---|
+| 1 (18–23 Nov) ✅ | Foundation | Deploy pipeline, noindex rules, redirects, hubs, headings, lead form |
+| 2 (24–30 Nov) 🔄 | Quick wins | Priority 15 titles and meta ✅, filter noindex ✅, Product schema ✅, refined plan ✅, duplicate list ⏳ |
+| 3 (1–7 Dec) | Audit | Crawl, 404s, redirect chains, sitemap error, analytics clean-up, duplicate merges, audit report |
+| 4 (8–14 Dec) | Technical | Breadcrumb and Organization schema, speed work, keyword map, competitor list |
+| 5–6 | On-page | Priority 15 content and FAQs, homepage, product template upgrade |
+| 7–8 | On-page and content | 5 category pages, 8 country hubs, blog posts 1–4 |
+| 9–10 | Authority | Directories and marketplaces, guest posts, About and trust pages |
+| 11–12 | Growth and review | Blog posts 5–8, next 5 product pages, AEO and GEO, Month 3 report, next-phase roadmap |
 
-- Weekly: changes deployed, plus Search Console clicks, impressions, CTR and position for the
-  priority pages.
-- Monthly: the full report from the original plan (section 11).
-- Change log: every deploy is a git commit explaining what changed and why.
+## 13. Expected deliverables
+
+| # | Deliverable | Status |
+|---|---|---|
+| 1 | SEO audit report | 🔄 Week 3 |
+| 2 | Keyword map and competitor analysis | ⬜ Week 4 |
+| 3 | Technical fixes | 🔄 |
+| 4 | Homepage optimization | 🔄 (H1 done) |
+| 5 | Category page optimization | ⬜ Month 2 |
+| 6 | 15–20 priority pages | 🔄 (titles and meta done) |
+| 7 | Internal linking | ⬜ |
+| 8 | 8 blog articles | ⬜ Months 2–3 |
+| 9 | Schema markup | 🔄 (Product brand done) |
+| 10 | Backlink campaign | ⬜ Month 3 |
+| 11 | AEO and GEO | ⬜ |
+| 12 | GA4 and Search Console tracking | 🔄 |
+| 13 | Monthly reports | ⬜ first one on 23 Dec |
+| 14 | Next-phase roadmap | ⬜ Month 3 |
+
+## 14. Final strategy
+
+**Quick wins and technical clean-up (in parallel) → Audit → Keyword map → On-page (priority pages,
+then hubs, then categories, then template) → Content and internal links → Authority → AEO/GEO →
+Measure and repeat.**
+
+The change from the original sequence: pages that already rank in the top 20 get optimized first,
+alongside the technical work, instead of waiting until Month 2. They can produce traffic within
+weeks while the slower work (head terms, links) builds up.
+
+## What we need from the owner
+
+1. Approve the duplicate merge list (`docs/duplicate-merge-proposal.md`).
+2. The correct data update date (April 2025 or 2026).
+3. Live-site access for crawling: add worldwidedatahub.com to the environment's allowed sites, or
+   upload a Screaming Frog export.
+4. A WordPress Application Password, so I can edit product and page text through the API.
+5. Company facts for the About and trust pages: data sources, record counts, refund terms, real
+   testimonials.
+6. Optional: connect GA4 to Windsor.ai, and upgrade Windsor.ai for more than 30 days of history.
