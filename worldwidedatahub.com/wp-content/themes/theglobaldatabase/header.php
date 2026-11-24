@@ -40,16 +40,34 @@
 	
 	  		
 
-<!-- begin olark code --><script type="text/javascript" async>
-  ;(function(o,l,a,r,k,y){if(o.olark)return;
-  r="script";y=l.createElement(r);r=l.getElementsByTagName(r)[0];
-  y.async=1;y.src="//"+a;r.parentNode.insertBefore(y,r);
-  y=o.olark=function(){k.s.push(arguments);k.t.push(+new Date)};
+<!-- Olark chat + Microsoft Clarity: queued now; script files load after page load, on first interaction or 4s later (speed). -->
+<script>
+(function(w,d){
+  /* Olark stub: calls are queued until the loader arrives */
+  var k={s:[],t:[+new Date],c:{},l:"static.olark.com/jsclient/loader.js"};
+  var y=w.olark=w.olark||function(){k.s.push(arguments);k.t.push(+new Date)};
+  y._=y._||k;
   y.extend=function(i,j){y("extend",i,j)};
   y.identify=function(i){y("identify",k.i=i)};
   y.configure=function(i,j){y("configure",i,j);k.c[i]=j};
-  k=y._={s:[],t:[+new Date],c:{},l:a};
-  })(window,document,"static.olark.com/jsclient/loader.js");/* custom configuration goes here (www.olark.com/documentation) */olark.identify('1457-474-10-9844');</script><!-- end olark code -->	
+  y.identify('1457-474-10-9844');
+  /* Clarity stub */
+  w.clarity=w.clarity||function(){(w.clarity.q=w.clarity.q||[]).push(arguments)};
+  var done=false, ev=['scroll','pointerdown','touchstart','keydown','wheel'];
+  function add(src){var t=d.createElement('script');t.async=1;t.src=src;d.head.appendChild(t);}
+  function go(){
+    if(done)return; done=true;
+    ev.forEach(function(e){w.removeEventListener(e,go,{passive:true});});
+    add('https://static.olark.com/jsclient/loader.js');
+    add('https://www.clarity.ms/tag/ltsm07m91r');
+  }
+  /* listen only after the page has loaded, so nothing competes with first render */
+  w.addEventListener('load',function(){
+    ev.forEach(function(e){w.addEventListener(e,go,{passive:true,once:true});});
+    setTimeout(go,4000);
+  });
+})(window,document);
+</script>	
 
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-CJ4X3TPFBN"></script>
@@ -60,13 +78,7 @@
 
   gtag('config', 'G-CJ4X3TPFBN');
 </script>
-	  <script type="text/javascript">
-    (function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-    })(window, document, "clarity", "script", "ltsm07m91r");
-</script>
+	  
   </head>
   <body <?php body_class(); ?>>
   <header>
