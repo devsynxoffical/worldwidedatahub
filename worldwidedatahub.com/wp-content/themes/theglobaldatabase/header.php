@@ -38,30 +38,6 @@
 
 
 	
-<!-- Meta Data Structure-->
-<meta name="Language" content="English" />
-<meta name="Publisher" content="WORLDWIDEDATAHUB" />
-<meta name="distribution" content="LOCAL" />
-<meta name="page-topic" content="WORLDWIDEDATAHUB">
-<meta name="YahooSeeker" content="INDEX, FOLLOW">
-<meta name="msnbot" content="INDEX, FOLLOW">
-<meta name="googlebot" content="index,follow"/>
-<meta name="allow-search" content="yes">
-<meta name="expires" content="never">
-
-<!-- End Meta Data Structure-->
-	 
-<!-- Meta NoyDir-->
-<meta name=”robots” content=”noydir” />
-<!-- End Meta NoyDir-->	  
-
-<!-- Revisit After Meta Tag-->
-<meta name="revisit-after" content="2 days">			
-<!-- End Revisit After Meta Tag-->	
-
-<!-- Meta Rating Tag-->
-<meta name="rating" content="General">			
-<!-- End Meta Rating Tag-->
 	  		
 
 <!-- begin olark code --><script type="text/javascript" async>
