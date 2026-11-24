@@ -43,6 +43,7 @@ example a smaller or cheaper list), say so and that row will be left out.
 | 28 | /product/ethiopia-company-database/ | 32.4 / 7 | /product/ethiopia-companies-database/ | 48.0 / 2 |
 | 29 | /product/iran-companies-database/ | 48.5 / 13 | /product/iran-company-database/ | 8.0 / 1 |
 | 30 | /product/kuwait-companies-database/ | 42.6 / 12 | /product/kuwait-company-database/ | 37.0 / 1 |
+| 31 | /saudi-arabia-email-list/ (hub) | n/a | /saudi-arabia-companies-email-list/ (page, competes with the Saudi hub and product) | 6–37 / ~25 per week |
 
 \* Row 2: Week 1 redirects the two Netherlands Antilles URLs to
 `netherlands-companies-database-2`. Those entries will be updated to point straight at

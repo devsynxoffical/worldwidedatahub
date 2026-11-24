@@ -60,6 +60,14 @@ function wwdh_faq_items( $product ) {
 		'What information is included in the ' . $short . '?',
 		'Each record includes the following fields where available: ' . esc_html( implode( ', ', $fields ) ) . '.',
 	);
+	/* Record count: the same ACF value the theme already shows next to the product title. */
+	$records = function_exists( 'get_field' ) ? trim( wp_strip_all_tags( (string) get_field( 'product_record', $product->get_id() ) ) ) : '';
+	if ( '' !== $records ) {
+		$items[] = array(
+			'How many records are in the ' . $short . '?',
+			'The record count listed for the ' . esc_html( $short ) . ' is: ' . esc_html( $records ) . '. Request a free sample to check the data before you buy.',
+		);
+	}
 	$items[] = array(
 		'Can I get a free sample of the ' . $short . ' before buying?',
 		'Yes. Click <strong>Request sample</strong> on this page or use our <a href="' . $sample . '">contact form</a>, and we will send you sample records so you can check the data before you buy.',

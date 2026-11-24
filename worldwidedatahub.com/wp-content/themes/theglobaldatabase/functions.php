@@ -266,6 +266,7 @@ require_once get_template_directory() . '/inc/wwdh-seo.php';
 require_once get_template_directory() . '/inc/wwdh-shop.php';
 require_once get_template_directory() . '/inc/wwdh-payments.php';
 require_once get_template_directory() . '/inc/wwdh-faq.php';
+require_once get_template_directory() . '/inc/wwdh-product-links.php';
 add_action( 'wp_enqueue_scripts', function () {
 	if ( is_page_template( 'template-data-landing.php' ) || is_page( 173 ) ) {
 		$dir = get_template_directory();

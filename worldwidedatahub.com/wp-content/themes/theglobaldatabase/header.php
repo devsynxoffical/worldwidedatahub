@@ -23,9 +23,9 @@
 	<link rel="profile" href="https://gmpg.org/xfn/11">
 
    <?php wp_head(); ?>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <link rel="stylesheet" href="<?php echo esc_url( get_template_directory_uri() ); ?>/css/vendor/bootstrap.min.css?ver=4.4.1"><!-- self-hosted, identical to the BootstrapCDN 4.4.1 file (same sha384) -->
     <link href="https://fonts.googleapis.com/css2?family=Muli:wght@400;500;600;700;800&family=Staatliches&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="<?php echo esc_url( get_template_directory_uri() ); ?>/css/vendor/font-awesome/css/font-awesome.min.css?ver=4.7.0"><!-- self-hosted Font Awesome 4.7.0 -->
     <link rel="stylesheet" href="<?php bloginfo('template_directory'); ?>/css/owl.carousel.min.css">
     <link rel="stylesheet" href="<?php bloginfo('template_directory'); ?>/css/style.css">
     <link rel="stylesheet" href="<?php bloginfo('template_directory'); ?>/css/responsive.css">    
