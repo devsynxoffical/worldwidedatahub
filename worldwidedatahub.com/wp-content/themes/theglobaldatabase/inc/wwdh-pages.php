@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 function wwdh_home_meta() {
 	return array(
-		'B2B Email Lists & Business Databases | WorldWide DataHub',
+		'B2B Email Lists, Mobile Number & Business Databases',
 		'Country-wise B2B email lists, company databases, consumer email lists and mobile number databases. Instant download after payment. Request a free sample.',
 	);
 }
