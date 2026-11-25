@@ -148,7 +148,7 @@ get_header();
               if ($the_qyery->have_posts()) :
               while ( $the_qyery->have_posts() ) : $the_qyery->the_post();?>
               <a href="<?php the_permalink(); ?>"> 
-              <img src="<?php the_post_thumbnail_url();  ?>" alt="" width="100%"> 
+              <img src="<?php the_post_thumbnail_url();  ?>" alt="<?php echo esc_attr( get_the_title() ); ?>" width="100%"> 
               <h4> <?php the_title(); ?> </h4>
             </a> 
             <?php endwhile; endif; ?>
@@ -204,7 +204,7 @@ get_header();
             <div class="product-item-advertisement">
             <?php $category_link_business_north = get_category_link(18); ?> 
             <a href="<?php echo esc_url( $category_link_business_north ); ?>">
-              <img src="<?php echo home_url('/wp-content/themes/theglobaldatabase'); ?>/img/north-america1.jpeg" alt="">
+              <img src="<?php echo home_url('/wp-content/themes/theglobaldatabase'); ?>/img/north-america1.jpeg" alt="North America business databases">
               </a>
             </div>
           </div>            
@@ -865,7 +865,7 @@ get_header();
         <div class="row">
           <div class="col-md-12">
             <div class="mb-30 text-center">
-              <h2> 2025 Latest Whois Country Wise Database </h2>
+              <h2> Whois Database by Country </h2>
             </div>
           </div>           
           <?php $args = array( 'post_type' => 'product', 'stock' => 1, 'posts_per_page' => 12,'product_cat' => 'whois-database', 'orderby' =>'date','order' => 'ASC' ); ?>                 
@@ -923,6 +923,7 @@ get_header();
       </div>
     </div>                     
   </section>
+  <?php if ( function_exists( 'wwdh_home_faq' ) ) { wwdh_home_faq(); } ?>
   <section class="footer-above-section">
     <div class="global-database-wraper">
       <div class="container">
@@ -953,7 +954,7 @@ get_header();
         <?php if( have_rows('recently_updated') ): ?>
         <?php while ( have_rows('recently_updated') ) : the_row(); ?>
           <div class="col-md-5 col-sm-12">
-            <img src="<?php echo home_url('/wp-content/themes/theglobaldatabase'); ?>/img/recently-updated.png" alt="" width="100%">
+            <img src="<?php echo home_url('/wp-content/themes/theglobaldatabase'); ?>/img/recently-updated.png" alt="Recently updated databases" width="100%">
           </div>          
           <div class="col-md-6 col-sm-12 offset-md-1">
             <h2 class="mb-15"> <?php the_sub_field('heading'); ?> </h2>

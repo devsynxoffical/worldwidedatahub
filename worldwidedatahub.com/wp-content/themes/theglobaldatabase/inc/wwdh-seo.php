@@ -194,7 +194,7 @@ add_filter( 'the_content', function ( $content ) {
  * stale cached pages. Bump WWDH_CACHE_VER when a deploy changes page output.
  */
 if ( ! defined( 'WWDH_CACHE_VER' ) ) {
-	define( 'WWDH_CACHE_VER', '2026-11-25-links-selfhost' );
+	define( 'WWDH_CACHE_VER', '2026-11-25-home-categories' );
 }
 add_action( 'init', function () {
 	if ( get_option( 'wwdh_cache_ver' ) === WWDH_CACHE_VER ) {
