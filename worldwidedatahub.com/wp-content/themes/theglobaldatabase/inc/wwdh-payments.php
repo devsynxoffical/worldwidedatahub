@@ -26,9 +26,13 @@ if ( ! WWDH_STRIPE_ONLY ) {
 	return;
 }
 
-/* Stripe wallet / express buttons removed too (owner, 24 Nov): card form only. */
+/*
+ * Stripe wallets removed (owner, 24 Nov): Google Pay, Apple Pay, browser
+ * Payment Request, Amazon Pay. Stripe Link stays ON (owner, 25 Nov): it is
+ * Stripe's own one-click checkout and recent successful orders used it.
+ */
 function wwdh_is_wallet_gateway( $id ) {
-	return in_array( (string) $id, array( 'stripe_googlepay', 'stripe_applepay', 'stripe_payment_request', 'stripe_link_checkout', 'stripe_amazonpay' ), true );
+	return in_array( (string) $id, array( 'stripe_googlepay', 'stripe_applepay', 'stripe_payment_request', 'stripe_amazonpay' ), true );
 }
 
 function wwdh_is_stripe_gateway( $id ) {
@@ -39,10 +43,17 @@ function wwdh_is_stripe_gateway( $id ) {
 	return 'stripe' === $id || 0 === strpos( $id, 'stripe_' );
 }
 
-/* Payment Plugins for Stripe: no express buttons on product, cart, mini-cart. */
-foreach ( array( 'wc_stripe_product_payment_methods', 'wc_stripe_cart_payment_methods', 'wc_stripe_mini_cart_payment_methods', 'wc_stripe_express_payment_methods' ) as $wwdh_hook ) {
-	add_filter( $wwdh_hook, function () {
-		return array();
+/* Payment Plugins for Stripe: no express buttons on product pages at all. */
+add_filter( 'wc_stripe_product_payment_methods', function () {
+	return array();
+}, 999 );
+
+/* Cart, mini-cart and checkout express section: Link only (wallets removed). */
+foreach ( array( 'wc_stripe_cart_payment_methods', 'wc_stripe_mini_cart_payment_methods', 'wc_stripe_express_payment_methods' ) as $wwdh_hook ) {
+	add_filter( $wwdh_hook, function ( $gateways ) {
+		return array_filter( (array) $gateways, function ( $id ) {
+			return ! wwdh_is_wallet_gateway( $id );
+		}, ARRAY_FILTER_USE_KEY );
 	}, 999 );
 }
 unset( $wwdh_hook );
@@ -100,10 +111,11 @@ add_action( 'wp_head', function () {
 		. '#ppcp-messages,.ppcp-messages,.ppcp-button-apm,'
 		. '#wcpay-express-checkout-element,#wcpay-express-checkout-button-separator,'
 		. '.wcpay-express-checkout-wrapper,#wcpay-payment-request-wrapper,'
-		. '.wc-stripe-product-checkout-container,.wc-stripe-cart-checkout-container,'
+		. '.wc-stripe-product-checkout-container,'
 		. '.wc-stripe-payment-request-container,#wc-stripe-express-checkout-element,'
-		. '#wc-stripe-express-checkout-button-separator,.wc-stripe-banner-checkout,'
-		. '.payment_method_stripe_googlepay,.payment_method_stripe_applepay,.payment_method_stripe_payment_request'
+		. '#wc-stripe-express-checkout-button-separator,'
+		. '.payment_method_stripe_googlepay,.payment_method_stripe_applepay,.payment_method_stripe_payment_request,.payment_method_stripe_amazonpay,'
+		. '.banner_payment_method_stripe_googlepay,.banner_payment_method_stripe_applepay,.banner_payment_method_stripe_payment_request,.banner_payment_method_stripe_amazonpay'
 		. '{display:none!important}</style>' . "\n";
 }, 99 );
 
