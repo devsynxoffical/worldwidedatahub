@@ -402,3 +402,13 @@ function woo_custom_product_searchform( $form ) {
     return $form;
 
 }
+/*
+ * One jQuery for the whole site. The theme used to load four extra jQuery
+ * copies in the footer, which replaced the copy WooCommerce and the payment
+ * plugins were using and stopped the Stripe card field from loading at
+ * checkout. Theme scripts use "$", so expose WordPress's jQuery under it.
+ */
+add_action( 'wp_enqueue_scripts', function () {
+	wp_enqueue_script( 'jquery' );
+	wp_add_inline_script( 'jquery-core', 'window.$ = window.$ || window.jQuery;' );
+}, 1 );
